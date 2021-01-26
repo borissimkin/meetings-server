@@ -9,6 +9,14 @@ app.use(cors())
 
 const peerServer = PeerServer({port: 3001, path: '/'})
 
+peerServer.on('connection', (client) => {
+  console.log(client)
+});
+
+peerServer.on('disconnect', (client) => {
+  console.log(client)
+});
+
 const port = process.env.PORT || 3000
 
 const existingRooms = ['123456789', '123', '11111', '123123']
@@ -23,15 +31,23 @@ app.get('/api/room/:id/exists', (req, res) => {
 
 })
 
-app.get('/api/room/:id/users', (req, res) => {
-  let sockets = io.sockets.adapter.rooms[req.params.id].sockets
+app.get('/api/room/:id/peers', (req, res) => {
+  let room = io.sockets.adapter.rooms[req.params.id]
+  if (!room) {
+    return res.jsonp([])
+  }
+  const results = [];
+  const sockets = room.sockets
   for (let socketId of Object.keys(sockets)) {
     let clientSocket = io.sockets.connected[socketId];
-    console.log(clientSocket.user.userId)
+    if (clientSocket.user) {
+      results.push({
+        userId: clientSocket.user.userId,
+        peerId: clientSocket.user.peerId,
+      })
+    }
   }
-  res.jsonp({
-    exists: existingRooms.includes(req.params.id)
-  })
+  res.jsonp(results)
 
 })
 
@@ -41,11 +57,6 @@ app.use('/*', express.static(__dirname + '/dist'));
 
 io.on('connection', socket => {
   socket.on('join-room', (roomId, userId) => {
-    console.log(socket.test)
-    socket.user = {
-      userId,
-
-    }
     console.log({roomId, userId})
     socket.join(roomId)
 
@@ -56,12 +67,14 @@ io.on('connection', socket => {
     })
 
     socket.on('new-message', data => {
-      console.log(socket.user)
       socket.to(roomId).broadcast.emit('newMessage', data)
     })
 
     socket.on('call-connect', (peerId, userId) => {
-      console.log(`Call connect peerId=${peerId} userId=${userId}`)
+      socket.user = {
+        userId,
+        peerId
+      }
       socket.to(roomId).broadcast.emit('callConnected', peerId, userId)
     })
   })
