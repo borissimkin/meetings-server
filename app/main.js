@@ -29,7 +29,7 @@ const existingRooms = ['123456789', '123', '11111', '123123']
 
 app.use(express.static(__dirname + '/dist'));
 
-app.use(require('./routes/auth'));
+app.use('/api', require('./routes/auth'));
 
 app.get('/api/room/:id/exists', (req, res) => {
   res.jsonp({

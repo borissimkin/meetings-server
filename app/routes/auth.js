@@ -42,7 +42,7 @@ router.post('/sign-up', async (req, res, next) => {
  *  token
  * }
  * **/
-router.post('/sign-in', async (req, res, next) => {
+router.post('/sign-in', async (req, res) => {
   const {email, password} = {...req.body};
   const user = await User.findOne({
     where: {
@@ -50,11 +50,11 @@ router.post('/sign-in', async (req, res, next) => {
     }
   })
   if (!user) {
-    res.status(401).send("Неверный email или пароль")
+    res.status(403).send("Неверный email или пароль")
   }
-  const isSame = verifyPassword(password, user.password)
+  const isSame = await verifyPassword(password, user.password)
   if (!isSame) {
-    res.status(401).send("Неверный email или пароль")
+    return res.status(403).send("Неверный email или пароль")
   }
   const token = generateToken(user)
   res.jsonp({token})
