@@ -4,8 +4,14 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const cors = require('cors')
 const { PeerServer } = require('peer')
+const bodyParser = require('body-parser')
 
 app.use(cors())
+
+app.use( bodyParser.json() );       // to support JSON-encoded bodies
+app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+  extended: false
+}));
 
 const peerServer = PeerServer({port: 3001, path: '/'})
 
@@ -23,6 +29,7 @@ const existingRooms = ['123456789', '123', '11111', '123123']
 
 app.use(express.static(__dirname + '/dist'));
 
+app.use(require('./routes/auth'));
 
 app.get('/api/room/:id/exists', (req, res) => {
   res.jsonp({
@@ -84,3 +91,8 @@ io.on('connection', socket => {
 server.listen(port, () => {
     console.log(`listen on port ${port}`)
 })
+
+
+module.exports = {
+
+}
