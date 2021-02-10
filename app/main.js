@@ -9,8 +9,8 @@ const bodyParser = require('body-parser')
 
 app.use(cors())
 
-app.use( bodyParser.json() );       // to support JSON-encoded bodies
-app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+app.use( bodyParser.json() );
+app.use(bodyParser.urlencoded({
   extended: false
 }));
 
@@ -31,7 +31,6 @@ app.use(express.static(__dirname + '/dist'));
 
 app.use('/api', require('./routes/auth'));
 app.use(require('./routes/room'))
-
 
 
 app.use('/*', express.static(__dirname + '/dist'));

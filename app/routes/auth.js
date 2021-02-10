@@ -1,4 +1,4 @@
-const {generateToken} = require("../services/auth.service");
+const {generateToken} = require("../services/auth-service");
 const {verifyPassword} = require("../common/hash");
 const {User} = require("../models/User");
 const {hashPassword} = require("../common/hash");

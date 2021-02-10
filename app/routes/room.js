@@ -1,15 +1,18 @@
+const isAuth = require('../middlewares/is-auth')
+
 const router = require('express').Router();
 const existingRooms = ['123456789', '123', '11111', '123123']
 
 
-router.get('/api/room/:id/exists', (req, res) => {
+router.get('/api/room/:id/exists', isAuth, (req, res) => {
+  const user = req.currentUser;
   res.jsonp({
     exists: existingRooms.includes(req.params.id)
   })
 
 })
 
-router.get('/api/room/:id/peers', (req, res) => {
+router.get('/api/room/:id/peers', isAuth, (req, res) => {
   let room = io.sockets.adapter.rooms[req.params.id]
   if (!room) {
     return res.jsonp([])
