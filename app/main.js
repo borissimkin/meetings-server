@@ -30,8 +30,10 @@ const port = process.env.PORT || 3000
 
 app.use(express.static(__dirname + '/dist'));
 
-app.use('/api', require('./routes/auth'));
+
 app.use(require('./routes/room'))
+app.use('/api', require('./routes/auth'));
+app.use('/api/profile', require('./routes/profile'))
 
 
 app.use('/*', express.static(__dirname + '/dist'));
