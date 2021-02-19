@@ -11,10 +11,21 @@ const router = require('express').Router();
  *   lastName,
  *   email,
  *   password,
+ *   confirmPassword
  * }**/
-router.post('/sign-up', async (req, res, next) => {
-  const {password, firstName, lastName, email} = {...req.body}
-  //todo: проверка что такой email уже есть + валидация
+router.post('/sign-up', async (req, res) => {
+  const {password, firstName, lastName, email, confirmPassword} = {...req.body}
+  if (password !== confirmPassword) {
+    return res.status(403).send("Пароли не совпадают")
+  }
+  const userSameEmail = await User.findOne({
+    where: {
+      email
+    }
+  })
+  if (userSameEmail) {
+    return res.status(403).send("Пользователь с таким email уже существует")
+  }
   try {
     const passwordHashed = await hashPassword(String(password))
     const user = await User.create({
@@ -27,7 +38,7 @@ router.post('/sign-up', async (req, res, next) => {
       user,
       passwordHashed
     })
-    next()
+    res.end()
   } catch (error) {
     console.log(error)
   }
@@ -38,7 +49,7 @@ router.post('/sign-up', async (req, res, next) => {
  *  email,
  *  password
  * }
- * output 401 or {
+ * output 403 or {
  *  token
  * }
  * **/
