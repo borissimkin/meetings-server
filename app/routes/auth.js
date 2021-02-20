@@ -5,6 +5,10 @@ const {hashPassword} = require("../common/hash");
 const router = require('express').Router();
 
 
+const toCapitalizeWord = (word) => {
+  return word.charAt(0).toUpperCase() + word.slice(1)
+}
+
 /** input:
  * {
  *   firstName,
@@ -30,8 +34,8 @@ router.post('/sign-up', async (req, res) => {
     const passwordHashed = await hashPassword(String(password))
     const user = await User.create({
       password: passwordHashed,
-      firstName,
-      lastName,
+      firstName: toCapitalizeWord(firstName),
+      lastName: toCapitalizeWord(lastName),
       email
     })
     console.log({

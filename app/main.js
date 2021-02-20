@@ -38,27 +38,43 @@ app.use('/api/profile', require('./routes/profile'))
 
 app.use('/*', express.static(__dirname + '/dist'));
 
+let messageID = 1
+const {User} = require("./models/User");
+
 io.sockets
   .on('connection', socketioJwt.authorize({
     secret: process.env.TOKEN_SECRET,
     timeout: 15000 // 15 seconds to send the authentication message
   }))
   .on('authenticated', (socket) => {
-    console.log(`hello! ${socket.decoded_token.data.email}`);
-    socket.on('join-room', (roomId, userId) => {
-      console.log({roomId, userId})
+    socket.on('join-room', async (roomId) => {
+      const user = await User.findByPk(socket.decoded_token.data.id)
+      const userInfo = {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName
+      }
       socket.join(roomId)
 
-      socket.to(roomId).broadcast.emit('userConnected', userId)
+      socket.to(roomId).broadcast.emit('userConnected', userInfo)
 
       socket.on('disconnect', () => {
-        socket.to(roomId).broadcast.emit('userDisconnected', userId)
+        socket.to(roomId).broadcast.emit('userDisconnected', userInfo)
+      })
+      socket.on('new-message',  data => {
+        const message = {
+          user: userInfo,
+          message: {
+            id: messageID,
+            text: data.message.text,
+            date: new Date()
+          }
+        }
+        messageID++;
+        io.in(roomId).emit('newMessage', message);
       })
 
-      socket.on('new-message', data => {
-        socket.to(roomId).broadcast.emit('newMessage', data)
-      })
-
+      //todo: тут переделать
       socket.on('call-connect', (peerId, userId) => {
         socket.user = {
           userId,
