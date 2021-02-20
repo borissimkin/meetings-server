@@ -74,13 +74,12 @@ io.sockets
         io.in(roomId).emit('newMessage', message);
       })
 
-      //todo: тут переделать
-      socket.on('call-connect', (peerId, userId) => {
+      socket.on('call-connect', (peerId) => {
         socket.user = {
-          userId,
+          ...userInfo,
           peerId
         }
-        socket.to(roomId).broadcast.emit('callConnected', peerId, userId)
+        socket.to(roomId).broadcast.emit('callConnected', peerId, userInfo.id)
       })
     })
 
