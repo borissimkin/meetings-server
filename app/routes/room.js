@@ -23,7 +23,11 @@ router.get('/api/room/:id/peers', isAuth, (req, res) => {
     let clientSocket = io.sockets.connected[socketId];
     if (clientSocket.user) {
       results.push({
-        userId: clientSocket.user.id,
+        user: {
+          id: clientSocket.user.id,
+          firstName: clientSocket.user.firstName,
+          lastName: clientSocket.user.lastName
+        },
         peerId: clientSocket.user.peerId,
       })
     }

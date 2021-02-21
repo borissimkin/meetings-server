@@ -42,7 +42,7 @@ let messageID = 1
 const {User} = require("./models/User");
 
 io.sockets
-  .on('connection', socketioJwt.authorize({
+  .on('connection', socketioJwt.authorize({             
     secret: process.env.TOKEN_SECRET,
     timeout: 15000 // 15 seconds to send the authentication message
   }))
@@ -79,7 +79,7 @@ io.sockets
           ...userInfo,
           peerId
         }
-        socket.to(roomId).broadcast.emit('callConnected', peerId, userInfo.id)
+        socket.to(roomId).broadcast.emit('callConnected', userInfo, peerId)
       })
     })
 
