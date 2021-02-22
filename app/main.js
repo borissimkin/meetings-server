@@ -39,7 +39,6 @@ app.use('/api/profile', require('./routes/profile'))
 app.use('/*', express.static(__dirname + '/dist'));
 
 let messageID = 1
-const {User} = require("./models/User");
 
 io.sockets
   .on('connection', socketioJwt.authorize({             
@@ -60,6 +59,7 @@ io.sockets
 
       socket.on('disconnect', () => {
         socket.to(roomId).broadcast.emit('userDisconnected', userInfo)
+        socket.leave(roomId)
       })
       socket.on('new-message',  data => {
         const message = {
@@ -72,6 +72,14 @@ io.sockets
         }
         messageID++;
         io.in(roomId).emit('newMessage', message);
+      })
+
+      socket.on('user-speak', () => {
+        socket.to(roomId).broadcast.emit('userSpeak', userInfo)
+      })
+
+      socket.on('user-stop-speak', () => {
+        socket.to(roomId).broadcast.emit('userStopSpeak', userInfo)
       })
 
       socket.on('call-connect', (peerId) => {
