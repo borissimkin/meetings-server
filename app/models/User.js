@@ -1,7 +1,5 @@
-const { Sequelize, Model, DataTypes } = require('sequelize');
-//todo: вынести в конфиг
-const sequelize = new Sequelize('postgresql://postgres:postgres@localhost:5432/meetings');
-
+const sequelize = require("./index");
+const { Model, DataTypes } = require('sequelize');
 
 class User extends Model {}
 User.init({
@@ -22,6 +20,7 @@ User.init({
     allowNull: false
   }
 }, { sequelize, modelName: 'user' });
+
 
 module.exports = {
   User

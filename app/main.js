@@ -4,9 +4,20 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 const cors = require('cors')
 
+const {User} = require("./models/User");
+const {Message} = require('./models/Message')
+const {Room} = require('./models/Room')
+const { AttendanceCheckpoint } = require('./models/AttendanceCheckpoint');
+const { Meeting } = require('./models/Meeting');
+const { UserMeetingState } = require('./models/UserMeetingsState');
+const { Visitor } = require('./models/Visitor');
+const { VisitorAttendanceCheck } = require('./models/VisitorAttendanceCheck');
+const sequelize = require('./models/index')
+
 const { PeerServer } = require('peer')
 const bodyParser = require('body-parser')
 const socketioJwt = require("socketio-jwt");
+
 
 app.use(cors())
 
@@ -24,6 +35,10 @@ const peerServer = PeerServer({port: 3001, path: '/'})
 // peerServer.on('disconnect', (client) => {
 //   console.log(client)
 // });
+
+
+sequelize.sync()
+
 
 const port = process.env.PORT || 3000
 
