@@ -82,6 +82,10 @@ io.sockets
         socket.to(roomId).broadcast.emit('userStopSpeak', userInfo)
       })
 
+      socket.on('whiteboard-drawing', (data) => {
+        socket.to(roomId).broadcast.emit('whiteboardDrawing', data)
+      })
+
       socket.on('call-connect', (peerId) => {
         socket.user = {
           ...userInfo,
