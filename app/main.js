@@ -60,55 +60,71 @@ io.sockets
     secret: process.env.TOKEN_SECRET,
     timeout: 15000 // 15 seconds to send the authentication message
   }))
-  .on('authenticated', (socket) => {
-    socket.on('join-room', async (roomId) => {
-      const user = await User.findByPk(socket.decoded_token.data.id)
-      const userInfo = {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName
-      }
-      socket.join(roomId)
+  .on('authenticated', async (socket) => {
+    const user = await User.findByPk(socket.decoded_token.data.id)
+    console.log(socket.adapter.rooms);
 
+    const userInfo = {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName
+    }
+    socket.on('join-room', (roomId) => {
+      console.log(socket.adapter.rooms);
+      socket.join(roomId)
+      console.log(socket.adapter.rooms);
+
+      socket.roomId = roomId;
       socket.to(roomId).broadcast.emit('userConnected', userInfo)
 
-      socket.on('disconnect', () => {
+    });
+
+    socket.on('leave-room', (roomId) => {
+      socket.leave(roomId, (error) => {
         socket.to(roomId).broadcast.emit('userDisconnected', userInfo)
-        socket.leave(roomId)
-      })
-      socket.on('new-message',  data => {
-        const message = {
-          user: userInfo,
-          message: {
-            id: messageID,
-            text: data.message.text,
-            date: new Date()
-          }
+        if (error) {
+          console.log(error)
         }
-        messageID++;
-        io.in(roomId).emit('newMessage', message);
-      })
-
-      socket.on('user-speak', () => {
-        socket.to(roomId).broadcast.emit('userSpeak', userInfo)
-      })
-
-      socket.on('user-stop-speak', () => {
-        socket.to(roomId).broadcast.emit('userStopSpeak', userInfo)
-      })
-
-      socket.on('whiteboard-drawing', (data) => {
-        socket.to(roomId).broadcast.emit('whiteboardDrawing', data)
-      })
-
-      socket.on('call-connect', (peerId) => {
-        socket.user = {
-          ...userInfo,
-          peerId
-        }
-        socket.to(roomId).broadcast.emit('callConnected', userInfo, peerId)
       })
     })
+
+    socket.on('disconnect', () => {
+      socket.to(socket.roomId).broadcast.emit('userDisconnected', userInfo)
+    })
+
+    socket.on('new-message',  data => {
+      const message = {
+        user: userInfo,
+        message: {
+          id: messageID,
+          text: data.message.text,
+          date: new Date()
+        }
+      }
+      messageID++;
+      io.in(socket.roomId).emit('newMessage', message);
+    })
+
+    socket.on('user-speak', () => {
+      socket.to(socket.roomId).broadcast.emit('userSpeak', userInfo)
+    })
+
+    socket.on('user-stop-speak', () => {
+      socket.to(socket.roomId).broadcast.emit('userStopSpeak', userInfo)
+    })
+
+    socket.on('whiteboard-drawing', (data) => {
+      socket.to(socket.roomId).broadcast.emit('whiteboardDrawing', data)
+    })
+
+    socket.on('call-connect', (peerId) => {
+      socket.user = {
+        ...userInfo,
+        peerId
+      }
+      socket.to(socket.roomId).broadcast.emit('callConnected', userInfo, peerId)
+    })
+
 
   });
 

@@ -19,9 +19,13 @@ router.get('/api/room/:id/peers', isAuth, (req, res) => {
   }
   const results = [];
   const sockets = room.sockets
+  const user = req.currentUser.dataValues;
   for (let socketId of Object.keys(sockets)) {
     let clientSocket = io.sockets.connected[socketId];
     if (clientSocket.user) {
+      if (clientSocket.user.id === user.id) {
+        continue
+      }
       results.push({
         user: {
           id: clientSocket.user.id,
