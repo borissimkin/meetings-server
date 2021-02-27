@@ -49,6 +49,7 @@ app.use(express.static(__dirname + '/dist'));
 app.use(require('./routes/room'))
 app.use('/api', require('./routes/auth'));
 app.use('/api/profile', require('./routes/profile'))
+app.use('/api/meeting', require('./routes/meeting'))
 
 
 app.use('/*', express.static(__dirname + '/dist'));
@@ -69,19 +70,19 @@ io.sockets
       firstName: user.firstName,
       lastName: user.lastName
     }
-    socket.on('join-room', (roomId) => {
+    socket.on('join-meeting', (meetingId) => {
       console.log(socket.adapter.rooms);
-      socket.join(roomId)
+      socket.join(meetingId)
       console.log(socket.adapter.rooms);
 
-      socket.roomId = roomId;
-      socket.to(roomId).broadcast.emit('userConnected', userInfo)
+      socket.meetingId = meetingId;
+      socket.to(meetingId).broadcast.emit('userConnected', userInfo)
 
     });
 
-    socket.on('leave-room', (roomId) => {
-      socket.leave(roomId, (error) => {
-        socket.to(roomId).broadcast.emit('userDisconnected', userInfo)
+    socket.on('leave-meeting', (meetingId) => {
+      socket.leave(meetingId, (error) => {
+        socket.to(meetingId).broadcast.emit('userDisconnected', userInfo)
         if (error) {
           console.log(error)
         }
@@ -89,7 +90,7 @@ io.sockets
     })
 
     socket.on('disconnect', () => {
-      socket.to(socket.roomId).broadcast.emit('userDisconnected', userInfo)
+      socket.to(socket.meetingId).broadcast.emit('userDisconnected', userInfo)
     })
 
     socket.on('new-message',  data => {
@@ -102,19 +103,19 @@ io.sockets
         }
       }
       messageID++;
-      io.in(socket.roomId).emit('newMessage', message);
+      io.in(socket.meetingId).emit('newMessage', message);
     })
 
     socket.on('user-speak', () => {
-      socket.to(socket.roomId).broadcast.emit('userSpeak', userInfo)
+      socket.to(socket.meetingId).broadcast.emit('userSpeak', userInfo)
     })
 
     socket.on('user-stop-speak', () => {
-      socket.to(socket.roomId).broadcast.emit('userStopSpeak', userInfo)
+      socket.to(socket.meetingId).broadcast.emit('userStopSpeak', userInfo)
     })
 
     socket.on('whiteboard-drawing', (data) => {
-      socket.to(socket.roomId).broadcast.emit('whiteboardDrawing', data)
+      socket.to(socket.meetingId).broadcast.emit('whiteboardDrawing', data)
     })
 
     socket.on('call-connect', (peerId) => {
@@ -122,7 +123,7 @@ io.sockets
         ...userInfo,
         peerId
       }
-      socket.to(socket.roomId).broadcast.emit('callConnected', userInfo, peerId)
+      socket.to(socket.meetingId).broadcast.emit('callConnected', userInfo, peerId)
     })
 
 

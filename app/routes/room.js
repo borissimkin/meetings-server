@@ -1,4 +1,5 @@
 const isAuth = require('../middlewares/is-auth')
+const {Meeting} = require("../models/Meeting");
 const {v4: uuidv4}= require("uuid");
 const {Room} = require("../models/Room");
 
@@ -41,41 +42,35 @@ router.get('/api/rooms', isAuth, async (req, res) => {
   return res.json(rooms)
 })
 
-
-router.get('/api/room/:id/exists', isAuth, (req, res) => {
-  const user = req.currentUser;
-  res.jsonp({
-    exists: existingRooms.includes(req.params.id)
+router.get('/api/room/:id/exists', isAuth, async (req, res) => {
+  const room = await Room.findOne({
+    where: {
+      hashId: req.params.id
+    }
+  })
+  res.json({
+    exists: !!room
   })
 
 })
 
-router.get('/api/room/:id/peers', isAuth, (req, res) => {
-  let room = io.sockets.adapter.rooms[req.params.id]
-  if (!room) {
-    return res.jsonp([])
-  }
-  const results = [];
-  const sockets = room.sockets
-  const user = req.currentUser.dataValues;
-  for (let socketId of Object.keys(sockets)) {
-    let clientSocket = io.sockets.connected[socketId];
-    if (clientSocket.user) {
-      if (clientSocket.user.id === user.id) {
-        continue
-      }
-      results.push({
-        user: {
-          id: clientSocket.user.id,
-          firstName: clientSocket.user.firstName,
-          lastName: clientSocket.user.lastName
-        },
-        peerId: clientSocket.user.peerId,
-      })
+router.get('/api/room/:id/meetings', isAuth, async (req, res) => {
+  const room = await Room.findOne({
+    where: {
+      hashId: req.params.id
     }
+  })
+  if (!room) {
+    return res.send(404)
   }
-  res.jsonp(results)
-
+  const meetings = await Meeting.findAll({
+    where: {
+      roomId: room.id
+    }
+  })
+  res.json(meetings)
 })
+
+
 
 module.exports = router
