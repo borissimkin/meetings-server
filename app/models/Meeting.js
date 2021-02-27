@@ -36,7 +36,7 @@ Meeting.init({
   }
 }, { sequelize, modelName: 'meeting' });
 
-User.hasMany(Meeting, {as: "UserMeetings"})
+User.hasMany(Meeting, {as: "UserMeetings", foreignKey: "creatorId"})
 Room.hasMany(Meeting, {as: "RoomMeetings"})
 
 module.exports = {

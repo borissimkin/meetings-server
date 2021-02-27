@@ -1,7 +1,45 @@
 const isAuth = require('../middlewares/is-auth')
+const {v4: uuidv4}= require("uuid");
+const {Room} = require("../models/Room");
 
 const router = require('express').Router();
 const existingRooms = ['123456789', '123', '11111', '123123']
+
+/**
+ * input {
+ *  name
+ * }
+ *
+ * output {
+ *   id
+ *   name
+ *   hashId
+ * }
+ * **/
+router.post('/api/room', isAuth, async (req, res) => {
+  const {name} = {...req.body}
+  const user = req.currentUser.dataValues;
+
+  const hashId = uuidv4()
+
+  const room = await Room.create({
+    name,
+    hashId,
+    creatorId: user.id
+  })
+
+  res.json({
+    id: room.id,
+    name: room.name,
+    hashId: room.hashId
+  })
+
+})
+
+router.get('/api/rooms', isAuth, async (req, res) => {
+  const rooms = await Room.findAll()
+  return res.json(rooms)
+})
 
 
 router.get('/api/room/:id/exists', isAuth, (req, res) => {
