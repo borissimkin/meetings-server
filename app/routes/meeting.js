@@ -101,19 +101,33 @@ router.post('/api/meeting/', isAuth, async (req, res) => {
     createdAt: meeting.createdAt
 
   })
-
-
 })
 
-//todo
-const existingRooms = ['123456789', '123', '11111', '123123']
 
-router.get('/api/meeting/:id/exists', isAuth, (req, res) => {
-  const user = req.currentUser;
-  res.jsonp({
-    exists: existingRooms.includes(req.params.id)
+router.get('/api/room/:roomId/meeting/:meetingId/exists', isAuth, async (req, res) => {
+  const roomHashId = req.params.roomId
+  const meetingHashId = req.params.meetingId
+  const room = await Room.findOne({
+    where: {
+      hashId: roomHashId
+    }
   })
-
+  if (room) {
+    const meeting = await Meeting.findOne({
+      where: {
+        roomId: room.id,
+        hashId: meetingHashId
+      }
+    })
+    if (meeting) {
+      return res.jsonp({
+        exists: true
+      })
+    }
+  }
+  res.jsonp({
+    exists: false
+  })
 })
 
 module.exports = router

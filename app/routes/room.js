@@ -4,7 +4,6 @@ const {Meeting} = require("../models/Meeting");
 const {Room} = require("../models/Room");
 
 const router = require('express').Router();
-const existingRooms = ['123456789', '123', '11111', '123123']
 
 /**
  * input {
