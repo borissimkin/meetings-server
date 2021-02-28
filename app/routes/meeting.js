@@ -1,5 +1,8 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {createUuid} = require("../common/uuid");
+const {Room} = require("../models/Room");
+const {Meeting} = require("../models/Meeting");
 
 
 router.get('/api/meeting/:id/peers', isAuth, (req, res) => {
@@ -30,7 +33,77 @@ router.get('/api/meeting/:id/peers', isAuth, (req, res) => {
 
 })
 
-router.get('/api/meeting/')
+/** input
+ * {
+ *   roomId,
+ *   name,
+ *   startDate,
+ *   startTime,
+ *   endTime,
+ *   isCheckListeners,
+ *   isExam
+ * },
+ * output {
+ *   id
+ *   name,
+ *   hashId
+ *   startDate,
+ *   startTime,
+ *   endTime,
+ *   isCheckListeners,
+ *   isExam,
+ *   creator {
+ *     id,
+ *     firstName,
+ *     lastName
+ *   }
+ * }
+ * **/
+router.post('/api/meeting/', isAuth, async (req, res) => {
+  const {id, firstName, lastName} = {...req.currentUser.dataValues}
+  const {roomId, name, startDate, startTime, endTime, isCheckListeners, isExam} = {...req.body}
+  const room = await Room.findOne({
+    where: {
+      hashId: roomId
+    }
+  })
+  if (!room) {
+    res.sendStatus(404)
+  }
+  const hashId = createUuid()
+
+  const meeting = await Meeting.create({
+    name,
+    roomId: room.id,
+    startDate,
+    startTime,
+    endTime,
+    isCheckListeners,
+    isExam,
+    hashId,
+    creatorId: id
+  })
+  const creator = {
+    id,
+    firstName,
+    lastName
+  }
+  res.json({
+    id: meeting.id,
+    name,
+    hashId,
+    startDate,
+    startTime,
+    endTime,
+    isCheckListeners,
+    isExam,
+    creator,
+    createdAt: meeting.createdAt
+
+  })
+
+
+})
 
 //todo
 const existingRooms = ['123456789', '123', '11111', '123123']

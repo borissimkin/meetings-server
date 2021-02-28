@@ -49,7 +49,7 @@ app.use(express.static(__dirname + '/dist'));
 app.use(require('./routes/room'))
 app.use('/api', require('./routes/auth'));
 app.use('/api/profile', require('./routes/profile'))
-app.use('/api/meeting', require('./routes/meeting'))
+app.use(require('./routes/meeting'))
 
 
 app.use('/*', express.static(__dirname + '/dist'));

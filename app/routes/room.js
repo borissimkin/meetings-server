@@ -1,6 +1,6 @@
 const isAuth = require('../middlewares/is-auth')
+const {createUuid} = require("../common/uuid");
 const {Meeting} = require("../models/Meeting");
-const {v4: uuidv4}= require("uuid");
 const {Room} = require("../models/Room");
 
 const router = require('express').Router();
@@ -21,8 +21,7 @@ router.post('/api/room', isAuth, async (req, res) => {
   const {name} = {...req.body}
   const user = req.currentUser.dataValues;
 
-  const hashId = uuidv4()
-
+  const hashId = createUuid()
   const room = await Room.create({
     name,
     hashId,
