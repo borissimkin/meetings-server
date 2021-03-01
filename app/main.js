@@ -56,6 +56,31 @@ app.use('/*', express.static(__dirname + '/dist'));
 
 let messageID = 1
 
+//todo: не знаю в какие файлики ложить
+const createVisitorIfNotExist = async (meetingHashId, userId) => {
+  const meeting = await Meeting.findOne({
+    where: {
+      hashId: meetingHashId
+    }
+  })
+  if (!meeting) {
+    console.error(`Meeting with hashId=${meetingHashId} not exist`)
+    return
+  }
+  const visitor = await Visitor.findOne({
+    where: {
+      userId,
+      meetingId: meeting.id
+    }
+  })
+  if (!visitor) {
+    await Visitor.create({
+      userId: userId,
+      meetingId: meeting.id
+    })
+  }
+}
+
 io.sockets
   .on('connection', socketioJwt.authorize({             
     secret: process.env.TOKEN_SECRET,
@@ -70,11 +95,9 @@ io.sockets
       firstName: user.firstName,
       lastName: user.lastName
     }
-    socket.on('join-meeting', (meetingId) => {
-      console.log(socket.adapter.rooms);
+    socket.on('join-meeting', async (meetingId) => {
       socket.join(meetingId)
-      console.log(socket.adapter.rooms);
-
+      await createVisitorIfNotExist(meetingId, userInfo.id)
       socket.meetingId = meetingId;
       socket.to(meetingId).broadcast.emit('userConnected', userInfo)
 
