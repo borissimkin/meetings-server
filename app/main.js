@@ -17,6 +17,8 @@ const sequelize = require('./models/index')
 const { PeerServer } = require('peer')
 const bodyParser = require('body-parser')
 const socketioJwt = require("socketio-jwt");
+const {createMessageForApi} = require("./common/helpers");
+const {findMeetingByHashId} = require("./common/helpers");
 
 
 app.use(cors())
@@ -54,8 +56,6 @@ app.use(require('./routes/meeting'))
 
 app.use('/*', express.static(__dirname + '/dist'));
 
-let messageID = 1
-
 //todo: не знаю в какие файлики ложить
 const createVisitorIfNotExist = async (meetingHashId, userId) => {
   const meeting = await findMeetingByHashId(meetingHashId)
@@ -82,14 +82,6 @@ const userCanStartCheckListeners = (meeting, userId) => {
 
 }
 
-const findMeetingByHashId = meetingHashId => {
-  return Meeting.findOne({
-    where: {
-      hashId: meetingHashId
-    }
-  })
-}
-
 io.sockets
   .on('connection', socketioJwt.authorize({             
     secret: process.env.TOKEN_SECRET,
@@ -97,6 +89,9 @@ io.sockets
   }))
   .on('authenticated', async (socket) => {
     const user = await User.findByPk(socket.decoded_token.data.id)
+    if (!user) {
+      return
+    }
     console.log(socket.adapter.rooms);
 
     const userInfo = {
@@ -125,17 +120,15 @@ io.sockets
       socket.to(socket.meetingId).broadcast.emit('userDisconnected', userInfo)
     })
 
-    socket.on('new-message',  data => {
-      const message = {
-        user: userInfo,
-        message: {
-          id: messageID,
-          text: data.message.text,
-          date: new Date()
-        }
-      }
-      messageID++;
-      io.in(socket.meetingId).emit('newMessage', message);
+    socket.on('new-message', async data => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const message = await Message.create({
+        text: data.message.text,
+        userId: userInfo.id,
+        meetingId: meeting.id
+      })
+      const apiMessage = createMessageForApi(message, userInfo)
+      io.in(socket.meetingId).emit('newMessage', apiMessage);
     })
 
     socket.on('user-speak', () => {

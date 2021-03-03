@@ -1,5 +1,9 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {createMessageForApi} = require("../common/helpers");
+const {User} = require("../models/User");
+const {Message} = require("../models/Message");
+const {findMeetingByHashId} = require("../common/helpers");
 const {createUuid} = require("../common/uuid");
 const {Room} = require("../models/Room");
 const {Meeting} = require("../models/Meeting");
@@ -128,6 +132,23 @@ router.get('/api/room/:roomId/meeting/:meetingId/exists', isAuth, async (req, re
   res.jsonp({
     exists: false
   })
+})
+
+router.get('/api/meeting/:meetingId/messages', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const messages = await Message.findAll({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const result = await Promise.all(
+    messages.map(async message => {
+      const user = await User.findByPk(message.userId)
+      return createMessageForApi(message, user)
+    })
+  )
+  res.json(result)
 })
 
 module.exports = router
