@@ -58,11 +58,7 @@ let messageID = 1
 
 //todo: не знаю в какие файлики ложить
 const createVisitorIfNotExist = async (meetingHashId, userId) => {
-  const meeting = await Meeting.findOne({
-    where: {
-      hashId: meetingHashId
-    }
-  })
+  const meeting = await findMeetingByHashId(meetingHashId)
   if (!meeting) {
     console.error(`Meeting with hashId=${meetingHashId} not exist`)
     return
@@ -79,6 +75,19 @@ const createVisitorIfNotExist = async (meetingHashId, userId) => {
       meetingId: meeting.id
     })
   }
+}
+
+const userCanStartCheckListeners = (meeting, userId) => {
+  return meeting.creatorId === userId
+
+}
+
+const findMeetingByHashId = meetingHashId => {
+  return Meeting.findOne({
+    where: {
+      hashId: meetingHashId
+    }
+  })
 }
 
 io.sockets
@@ -147,6 +156,46 @@ io.sockets
         peerId
       }
       socket.to(socket.meetingId).broadcast.emit('callConnected', userInfo, peerId)
+    })
+
+    socket.on('check-listeners', async () => {
+      //todo: делать интервал в которое можно подтвердить присутствие
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      if (!meeting) {
+        return
+      }
+      if (!userCanStartCheckListeners(meeting, socket.user.id)) {
+        return
+      }
+      const attendanceCheckpoint = await AttendanceCheckpoint.create({
+        meetingId: meeting.id
+      })
+      socket.to(socket.meetingId).broadcast.emit('checkListeners', {
+        id: attendanceCheckpoint.id
+      })
+    })
+
+    socket.on('pass-check-listeners', async (checkpointId) => {
+      const checkpoint = await AttendanceCheckpoint.findByPk(checkpointId)
+      if (!checkpoint) {
+        return
+      }
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      if (checkpoint.meetingId !== meeting.id) {
+        console.log(`Attendance check user=${id} meeting not equals`)
+        return
+      }
+      const visitor = await Visitor.findOne({
+        where: {
+          userId: socket.user.id,
+          meetingId: meeting.id
+        }
+      })
+      await VisitorAttendanceCheck.create({
+        visitorId: visitor.id,
+        attendanceCheckpointId: checkpoint.id
+      })
+
     })
 
 
