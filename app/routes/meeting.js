@@ -151,4 +151,10 @@ router.get('/api/meeting/:meetingId/messages', isAuth, async (req, res) => {
   res.json(result)
 })
 
+router.get('/api/meeting/:meetingId', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  res.json({...meeting.dataValues})
+})
+
 module.exports = router
