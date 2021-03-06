@@ -7,23 +7,28 @@ const cors = require('cors')
 const {User} = require("./models/User");
 const {Message} = require('./models/Message')
 const {Room} = require('./models/Room')
-const { AttendanceCheckpoint } = require('./models/AttendanceCheckpoint');
-const { Meeting } = require('./models/Meeting');
-const { UserMeetingState } = require('./models/UserMeetingsState');
-const { Visitor } = require('./models/Visitor');
-const { VisitorAttendanceCheck } = require('./models/VisitorAttendanceCheck');
+const {AttendanceCheckpoint} = require('./models/AttendanceCheckpoint');
+const {Meeting} = require('./models/Meeting');
+const {UserMeetingState} = require('./models/UserMeetingsState');
+const {Visitor} = require('./models/Visitor');
+const {VisitorAttendanceCheck} = require('./models/VisitorAttendanceCheck');
 const sequelize = require('./models/index')
 
-const { PeerServer } = require('peer')
+const {PeerServer} = require('peer')
 const bodyParser = require('body-parser')
 const socketioJwt = require("socketio-jwt");
+const {userCanStartCheckListeners} = require("./common/helpers");
+const {findUserMeetingsState} = require("./common/helpers");
+const {resetUserMeetingState} = require("./common/helpers");
+const {createUserMeetingStateIfNotExist} = require("./common/helpers");
+const {createVisitorIfNotExist} = require("./common/helpers");
 const {createMessageForApi} = require("./common/helpers");
 const {findMeetingByHashId} = require("./common/helpers");
 
 
 app.use(cors())
 
-app.use( bodyParser.json() );
+app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: false
 }));
@@ -56,34 +61,9 @@ app.use(require('./routes/meeting'))
 
 app.use('/*', express.static(__dirname + '/dist'));
 
-//todo: не знаю в какие файлики ложить
-const createVisitorIfNotExist = async (meetingHashId, userId) => {
-  const meeting = await findMeetingByHashId(meetingHashId)
-  if (!meeting) {
-    console.error(`Meeting with hashId=${meetingHashId} not exist`)
-    return
-  }
-  const visitor = await Visitor.findOne({
-    where: {
-      userId,
-      meetingId: meeting.id
-    }
-  })
-  if (!visitor) {
-    await Visitor.create({
-      userId: userId,
-      meetingId: meeting.id
-    })
-  }
-}
-
-const userCanStartCheckListeners = (meeting, userId) => {
-  return meeting.creatorId === userId
-
-}
 
 io.sockets
-  .on('connection', socketioJwt.authorize({             
+  .on('connection', socketioJwt.authorize({
     secret: process.env.TOKEN_SECRET,
     timeout: 15000 // 15 seconds to send the authentication message
   }))
@@ -100,14 +80,24 @@ io.sockets
       lastName: user.lastName
     }
     socket.on('join-meeting', async (meetingId) => {
+      //todo: принимать настройки медиа и записывать userMeetingState
       socket.join(meetingId)
-      await createVisitorIfNotExist(meetingId, userInfo.id)
+      const meeting = await findMeetingByHashId(meetingId)
+      if (!meeting) {
+        console.error(`Meeting with hashId=${meetingId} not exist`)
+        return
+      }
+      await createVisitorIfNotExist(meeting.id, userInfo.id)
+      await createUserMeetingStateIfNotExist(meeting.id, userInfo.id)
       socket.meetingId = meetingId;
       socket.to(meetingId).broadcast.emit('userConnected', userInfo)
 
     });
 
-    socket.on('leave-meeting', (meetingId) => {
+    socket.on('leave-meeting', async (meetingId) => {
+      const meeting = await findMeetingByHashId(meetingId)
+      const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
+      await resetUserMeetingState(userMeetingState)
       socket.leave(meetingId, (error) => {
         socket.to(meetingId).broadcast.emit('userDisconnected', userInfo)
         if (error) {
@@ -116,7 +106,12 @@ io.sockets
       })
     })
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
+      if (userMeetingState) {
+        await resetUserMeetingState(userMeetingState)
+      }
       socket.to(socket.meetingId).broadcast.emit('userDisconnected', userInfo)
     })
 
@@ -141,6 +136,13 @@ io.sockets
 
     socket.on('whiteboard-drawing', (data) => {
       socket.to(socket.meetingId).broadcast.emit('whiteboardDrawing', data)
+    })
+
+    socket.on('raise-hand', async isRaiseHand => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
+      await userMeetingState.update({isRaiseHand})
+      socket.to(socket.meetingId).broadcast.emit('raisedHand', userInfo.id, isRaiseHand)
     })
 
     socket.on('call-connect', (peerId) => {
