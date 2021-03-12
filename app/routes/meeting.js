@@ -1,5 +1,7 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {Sequelize} = require("sequelize");
+const {UserMeetingState} = require("../models/UserMeetingsState");
 const {createMessageForApi} = require("../common/helpers");
 const {User} = require("../models/User");
 const {Message} = require("../models/Message");
@@ -8,22 +10,20 @@ const {createUuid} = require("../common/uuid");
 const {Room} = require("../models/Room");
 const {Meeting} = require("../models/Meeting");
 
-
-router.get('/api/meeting/:id/peers', isAuth, (req, res) => {
-  let meeting = io.sockets.adapter.rooms[req.params.id]
+const getConnectedParticipantsOfMeeting = (meetingHashId, currentUserId) => {
+  const meeting = io.sockets.adapter.rooms[meetingHashId]
+  const connectedParticipant = []
   if (!meeting) {
-    return res.jsonp([])
+    return connectedParticipant
   }
-  const results = [];
   const sockets = meeting.sockets
-  const user = req.currentUser.dataValues;
   for (let socketId of Object.keys(sockets)) {
     let clientSocket = io.sockets.connected[socketId];
     if (clientSocket.user) {
-      if (clientSocket.user.id === user.id) {
+      if (clientSocket.user.id === currentUserId) {
         continue
       }
-      results.push({
+      connectedParticipant.push({
         user: {
           id: clientSocket.user.id,
           firstName: clientSocket.user.firstName,
@@ -33,7 +33,51 @@ router.get('/api/meeting/:id/peers', isAuth, (req, res) => {
       })
     }
   }
-  res.jsonp(results)
+  return connectedParticipant
+}
+
+router.get('/api/meeting/:id/peers', isAuth, (req, res) => {
+  const meetingHashId = req.params.id
+  const currentUser = req.currentUser.dataValues;
+  res.jsonp(getConnectedParticipantsOfMeeting(meetingHashId, currentUser.id))
+})
+
+/**
+ * {
+ *   userId: {
+ *     enabledVideo
+ *     ...
+ *   },
+ *   ...
+ * }
+ * **/
+router.get('/api/meeting/:id/states-participants', isAuth, async (req, res) => {
+  const meetingHashId = req.params.id
+  const currentUser = req.currentUser.dataValues;
+  const connectedParticipants = getConnectedParticipantsOfMeeting(meetingHashId, currentUser.id)
+  const meeting = await Meeting.findOne({
+    where: {
+      hashId: meetingHashId
+    }
+  })
+  const participantIds = connectedParticipants.map(participant => participant.user.id)
+  const meetingStates = await UserMeetingState.findAll({
+    where: {
+      meetingId: meeting.id,
+      userId: {
+        [Sequelize.Op.in]: participantIds
+      }
+    },
+  })
+  const result = {}
+  meetingStates.forEach(meetingState => {
+    result[meetingState.userId] = {
+      enabledVideo: meetingState.enabledVideo,
+      enabledAudio: meetingState.enabledAudio,
+      isRaisedHand: meetingState.isRaisedHand
+    }
+  })
+  res.jsonp(result)
 
 })
 

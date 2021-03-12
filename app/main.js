@@ -79,19 +79,22 @@ io.sockets
       firstName: user.firstName,
       lastName: user.lastName
     }
-    socket.on('join-meeting', async (meetingId) => {
-      //todo: принимать настройки медиа и записывать userMeetingState
-      socket.join(meetingId)
+    socket.on('join-meeting', async (meetingId, settingDevices) => {
       const meeting = await findMeetingByHashId(meetingId)
+      const {enabledVideo, enabledAudio} = {...settingDevices}
       if (!meeting) {
         console.error(`Meeting with hashId=${meetingId} not exist`)
         return
       }
+      socket.join(meetingId)
       await createVisitorIfNotExist(meeting.id, userInfo.id)
-      await createUserMeetingStateIfNotExist(meeting.id, userInfo.id)
+      const userMeetingState = await createUserMeetingStateIfNotExist(meeting.id, userInfo.id)
+      await userMeetingState.update({
+        enabledVideo,
+        enabledAudio
+      })
       socket.meetingId = meetingId;
-      socket.to(meetingId).broadcast.emit('userConnected', userInfo)
-
+      socket.to(meetingId).broadcast.emit('userConnected', userInfo, settingDevices)
     });
 
     socket.on('leave-meeting', async (meetingId) => {
@@ -107,7 +110,13 @@ io.sockets
     })
 
     socket.on('disconnect', async () => {
+      if (!socket.meetingId) {
+        return
+      }
       const meeting = await findMeetingByHashId(socket.meetingId)
+      if (!meeting) {
+        return
+      }
       const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
       if (userMeetingState) {
         await resetUserMeetingState(userMeetingState)

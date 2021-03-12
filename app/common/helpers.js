@@ -35,34 +35,37 @@ const createMessageForApi = (message, user) => {
   }
 }
 
+//todo: оказывается  библиотекие уже в есть такая функция
 const createVisitorIfNotExist = async (meetingId, userId) => {
-  const visitor = await Visitor.findOne({
+  let visitor = await Visitor.findOne({
     where: {
       userId,
       meetingId
     }
   })
   if (!visitor) {
-    await Visitor.create({
+    visitor = await Visitor.create({
       userId,
       meetingId
     })
   }
+  return visitor
 }
 
 const createUserMeetingStateIfNotExist = async (meetingId, userId) => {
-  const userMeetingState = await UserMeetingState.findOne({
+  let userMeetingState = await UserMeetingState.findOne({
     where: {
       userId,
       meetingId
     }
   })
   if (!userMeetingState) {
-    await UserMeetingState.create({
+    userMeetingState = await UserMeetingState.create({
       userId,
       meetingId
     })
   }
+  return userMeetingState
 }
 const userCanStartCheckListeners = (meeting, userId) => {
   return meeting.creatorId === userId
