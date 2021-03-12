@@ -13,7 +13,7 @@ UserMeetingState.init({
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  isRaiseHand: {
+  isRaisedHand: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   }
