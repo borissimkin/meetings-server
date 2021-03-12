@@ -147,11 +147,25 @@ io.sockets
       socket.to(socket.meetingId).broadcast.emit('whiteboardDrawing', data)
     })
 
-    socket.on('raise-hand', async isRaiseHand => {
+    socket.on('raise-hand', async isRaisedHand => {
       const meeting = await findMeetingByHashId(socket.meetingId)
       const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
-      await userMeetingState.update({isRaiseHand})
-      socket.to(socket.meetingId).broadcast.emit('raisedHand', userInfo.id, isRaiseHand)
+      await userMeetingState.update({isRaisedHand})
+      socket.to(socket.meetingId).broadcast.emit('raisedHand', userInfo.id, isRaisedHand)
+    })
+
+    socket.on('toggle-audio', async enabledAudio => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
+      await userMeetingState.update({enabledAudio})
+      socket.to(socket.meetingId).broadcast.emit('toggleAudio', userInfo.id, enabledAudio)
+    })
+
+    socket.on('toggle-video', async enabledVideo => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
+      await userMeetingState.update({enabledVideo})
+      socket.to(socket.meetingId).broadcast.emit('toggleVideo', userInfo.id, enabledVideo)
     })
 
     socket.on('call-connect', (peerId) => {

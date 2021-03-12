@@ -74,7 +74,7 @@ const userCanStartCheckListeners = (meeting, userId) => {
 
 const resetUserMeetingState = (userMeetingState) => {
   const defaultValues = {
-    isRaiseHand: false,
+    isRaisedHand: false,
     enabledAudio: false,
     enabledVideo: false
   }
