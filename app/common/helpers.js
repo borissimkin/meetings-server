@@ -20,18 +20,23 @@ const findUserMeetingsState = (meetingId, userId) => {
   })
 }
 
-const createMessageForApi = (message, user) => {
+const createUserDTO = user => {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName
+  }
+
+}
+
+const createMessageDTO = (message, user) => {
   return {
     message: {
       id: message.id,
       text: message.text,
       date: message.createdAt,
     },
-    user: {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName
-    }
+    user: createUserDTO(user)
   }
 }
 
@@ -85,9 +90,10 @@ module.exports = {
   createVisitorIfNotExist,
   createUserMeetingStateIfNotExist,
   findMeetingByHashId,
-  createMessageForApi,
+  createMessageDTO,
   userCanStartCheckListeners,
   resetUserMeetingState,
   findUserMeetingsState,
+  createUserDTO,
 
 }

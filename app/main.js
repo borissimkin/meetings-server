@@ -22,7 +22,7 @@ const {findUserMeetingsState} = require("./common/helpers");
 const {resetUserMeetingState} = require("./common/helpers");
 const {createUserMeetingStateIfNotExist} = require("./common/helpers");
 const {createVisitorIfNotExist} = require("./common/helpers");
-const {createMessageForApi} = require("./common/helpers");
+const {createMessageDTO, createUserDTO} = require("./common/helpers");
 const {findMeetingByHashId} = require("./common/helpers");
 
 
@@ -74,12 +74,9 @@ io.sockets
     }
     console.log(socket.adapter.rooms);
 
-    const userInfo = {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName
-    }
+    const userInfo = createUserDTO(user)
     socket.on('join-meeting', async (meetingId, settingDevices) => {
+      //todo: add online field
       const meeting = await findMeetingByHashId(meetingId)
       const {enabledVideo, enabledAudio} = {...settingDevices}
       if (!meeting) {
@@ -131,7 +128,7 @@ io.sockets
         userId: userInfo.id,
         meetingId: meeting.id
       })
-      const apiMessage = createMessageForApi(message, userInfo)
+      const apiMessage = createMessageDTO(message, userInfo)
       io.in(socket.meetingId).emit('newMessage', apiMessage);
     })
 
