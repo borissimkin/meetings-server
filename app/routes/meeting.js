@@ -1,5 +1,7 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {VisitorAttendanceCheck} = require("../models/VisitorAttendanceCheck");
+const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
 const {createUserDTO} = require("../common/helpers");
 const {Visitor} = require("../models/Visitor");
 const {Sequelize} = require("sequelize");
@@ -38,7 +40,7 @@ const getConnectedParticipantsOfMeeting = (meetingHashId, currentUserId) => {
   return connectedParticipant
 }
 /**
- * Возвращает всех участников (кто хоть раз заходил в собрание) собрания (не включая текущего пользователя).
+ * Возвращает всех участников, кто хоть раз заходил в собрание, не включая текущего пользователя.
  * [{
  *   user: {
           id:
@@ -243,6 +245,64 @@ router.get('/api/meeting/:meetingId', isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
   res.json({...meeting.dataValues})
+})
+
+/**
+ * [
+ *    {
+ *     id,
+ *     createdAt
+ *     userIds: []
+
+ *   },
+ *   {
+ *     id,
+ *     createdAt,
+ *     userIds: []
+ *   }
+ *
+ * ]
+ *
+ *
+ * **/
+router.get('/api/meeting/:meetingId/checkpoints', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const checkpoints = await AttendanceCheckpoint.findAll({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+
+  const result = await Promise.all(
+    checkpoints.map(async checkpoint => {
+      let visitorIds = await VisitorAttendanceCheck.findAll({
+        attributes: ['visitorId'],
+        where: {
+          attendanceCheckpointId: checkpoint.id
+        }
+      })
+      visitorIds = visitorIds.map(x => x.get("visitorId"))
+
+      let userIds = await Visitor.findAll({
+        attributes: ['userId'],
+        where: {
+          meetingId: meeting.id,
+          id: {
+            [Sequelize.Op.in]: visitorIds
+          }
+        },
+      })
+      userIds = userIds.map(u => u.get("userId"))
+
+      return {
+        "id": checkpoint.id,
+        "createdAt": checkpoint.createdAt,
+        userIds
+      }
+    })
+  )
+  res.json(result)
 })
 
 module.exports = router

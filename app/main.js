@@ -185,9 +185,10 @@ io.sockets
       const attendanceCheckpoint = await AttendanceCheckpoint.create({
         meetingId: meeting.id
       })
-      socket.to(socket.meetingId).broadcast.emit('checkListeners', {
-        id: attendanceCheckpoint.id
-      })
+      io.in(socket.meetingId).emit('checkListeners', {
+        id: attendanceCheckpoint.id,
+        createdAt: attendanceCheckpoint.createdAt
+      });
     })
 
     socket.on('pass-check-listeners', async (checkpointId) => {
@@ -210,6 +211,8 @@ io.sockets
         visitorId: visitor.id,
         attendanceCheckpointId: checkpoint.id
       })
+
+      socket.to(socket.meetingId).broadcast.emit('passCheckListeners', checkpointId, socket.user.id)
 
     })
 
