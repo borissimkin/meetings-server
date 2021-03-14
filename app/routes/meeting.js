@@ -1,8 +1,12 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {VisitorAttendanceCheck} = require("../models/VisitorAttendanceCheck");
+const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
+const {createUserDTO} = require("../common/helpers");
+const {Visitor} = require("../models/Visitor");
 const {Sequelize} = require("sequelize");
 const {UserMeetingState} = require("../models/UserMeetingsState");
-const {createMessageForApi} = require("../common/helpers");
+const {createMessageDTO} = require("../common/helpers");
 const {User} = require("../models/User");
 const {Message} = require("../models/Message");
 const {findMeetingByHashId} = require("../common/helpers");
@@ -35,11 +39,53 @@ const getConnectedParticipantsOfMeeting = (meetingHashId, currentUserId) => {
   }
   return connectedParticipant
 }
-
-router.get('/api/meeting/:id/peers', isAuth, (req, res) => {
+/**
+ * Возвращает всех участников, кто хоть раз заходил в собрание, не включая текущего пользователя.
+ * [{
+ *   user: {
+          id:
+          firstName:
+          lastName:
+        },
+     peerId:,
+     online: true|false
+ * },
+ * {
+ *   ...
+ * }
+ *
+ * ]
+ * **/
+router.get('/api/meeting/:id/all-participants', isAuth, async (req, res) => {
   const meetingHashId = req.params.id
   const currentUser = req.currentUser.dataValues;
-  res.jsonp(getConnectedParticipantsOfMeeting(meetingHashId, currentUser.id))
+  const onlineParticipants = getConnectedParticipantsOfMeeting(meetingHashId, currentUser.id)
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const visitors = await Visitor.findAll({
+    where: {
+      meetingId: meeting.id,
+      userId: {
+        [Sequelize.Op.ne]: currentUser.id
+      }
+    },
+  })
+  const result = await Promise.all(
+    visitors.map(async visitor => {
+      const user = await User.findByPk(visitor.userId)
+      const participant = onlineParticipants.find(participant => participant.user.id === user.id)
+      const online = !!participant
+      let peerId = ""
+      if (participant) {
+        peerId = participant.peerId
+      }
+      return {
+        user: createUserDTO(user),
+        online,
+        peerId
+      }
+    })
+  )
+  res.json(result)
 })
 
 /**
@@ -189,7 +235,7 @@ router.get('/api/meeting/:meetingId/messages', isAuth, async (req, res) => {
   const result = await Promise.all(
     messages.map(async message => {
       const user = await User.findByPk(message.userId)
-      return createMessageForApi(message, user)
+      return createMessageDTO(message, user)
     })
   )
   res.json(result)
@@ -199,6 +245,64 @@ router.get('/api/meeting/:meetingId', isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
   res.json({...meeting.dataValues})
+})
+
+/**
+ * [
+ *    {
+ *     id,
+ *     createdAt
+ *     userIds: []
+
+ *   },
+ *   {
+ *     id,
+ *     createdAt,
+ *     userIds: []
+ *   }
+ *
+ * ]
+ *
+ *
+ * **/
+router.get('/api/meeting/:meetingId/checkpoints', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const checkpoints = await AttendanceCheckpoint.findAll({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+
+  const result = await Promise.all(
+    checkpoints.map(async checkpoint => {
+      let visitorIds = await VisitorAttendanceCheck.findAll({
+        attributes: ['visitorId'],
+        where: {
+          attendanceCheckpointId: checkpoint.id
+        }
+      })
+      visitorIds = visitorIds.map(x => x.get("visitorId"))
+
+      let userIds = await Visitor.findAll({
+        attributes: ['userId'],
+        where: {
+          meetingId: meeting.id,
+          id: {
+            [Sequelize.Op.in]: visitorIds
+          }
+        },
+      })
+      userIds = userIds.map(u => u.get("userId"))
+
+      return {
+        "id": checkpoint.id,
+        "createdAt": checkpoint.createdAt,
+        userIds
+      }
+    })
+  )
+  res.json(result)
 })
 
 module.exports = router
