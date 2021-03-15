@@ -24,6 +24,7 @@ const {createUserMeetingStateIfNotExist} = require("./common/helpers");
 const {createVisitorIfNotExist} = require("./common/helpers");
 const {createMessageDTO, createUserDTO} = require("./common/helpers");
 const {findMeetingByHashId} = require("./common/helpers");
+const attendanceInterval = require("./schedulers/attendanceScheduler")
 
 
 app.use(cors())

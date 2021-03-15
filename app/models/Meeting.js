@@ -14,7 +14,7 @@ Meeting.init({
     allowNull: false,
   },
   startDate: {
-    type: DataTypes.DATE,
+    type: DataTypes.DATEONLY,
   },
   startTime: {
     type: DataTypes.TIME
