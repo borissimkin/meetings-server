@@ -1,3 +1,4 @@
+const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
 const {UserMeetingState} = require("../models/UserMeetingsState");
 const {Visitor} = require("../models/Visitor");
 const {Meeting} = require('../models/Meeting')
@@ -86,6 +87,20 @@ const resetUserMeetingState = (userMeetingState) => {
   return userMeetingState.update(defaultValues)
 }
 
+const sendCheckListeners = async (meeting) => {
+  if (!meeting) {
+    return
+  }
+
+  const attendanceCheckpoint = await AttendanceCheckpoint.create({
+    meetingId: meeting.id
+  })
+  io.in(meeting.hashId).emit('checkListeners', {
+    id: attendanceCheckpoint.id,
+    createdAt: attendanceCheckpoint.createdAt
+  });
+}
+
 module.exports = {
   createVisitorIfNotExist,
   createUserMeetingStateIfNotExist,
@@ -95,5 +110,6 @@ module.exports = {
   resetUserMeetingState,
   findUserMeetingsState,
   createUserDTO,
+  sendCheckListeners
 
 }
