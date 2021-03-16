@@ -25,6 +25,7 @@ const {createVisitorIfNotExist} = require("./common/helpers");
 const {createMessageDTO, createUserDTO} = require("./common/helpers");
 const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
+const {sendCheckListeners} = require("./common/helpers");
 
 
 app.use(cors())
@@ -177,19 +178,10 @@ io.sockets
     socket.on('check-listeners', async () => {
       //todo: делать интервал в которое можно подтвердить присутствие
       const meeting = await findMeetingByHashId(socket.meetingId)
-      if (!meeting) {
-        return
-      }
       if (!userCanStartCheckListeners(meeting, socket.user.id)) {
         return
       }
-      const attendanceCheckpoint = await AttendanceCheckpoint.create({
-        meetingId: meeting.id
-      })
-      io.in(socket.meetingId).emit('checkListeners', {
-        id: attendanceCheckpoint.id,
-        createdAt: attendanceCheckpoint.createdAt
-      });
+      await sendCheckListeners(meeting)
     })
 
     socket.on('pass-check-listeners', async (checkpointId) => {

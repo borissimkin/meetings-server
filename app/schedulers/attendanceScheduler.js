@@ -1,10 +1,13 @@
+const {sendCheckListeners} = require("../common/helpers");
+const {getDateFromDatetime} = require("../common/datetime");
+const {getTimeFromDatetime} = require("../common/datetime");
+const {getFullMinutesFromTime} = require("../common/datetime");
 const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
 const {Meeting} = require("../models/Meeting");
 const { Op } = require('sequelize')
 
 const startAttendanceCheck = async () => {
-  const countAttendanceCheckpoints = 5
-  console.log('защед');
+  const countAttendanceCheckpoints = 5 // потом будет вводить пользователь при создании собрания
   const today = new Date()
   const currentTime = getTimeFromDatetime(today)
   const currentDate = getDateFromDatetime(today)
@@ -27,8 +30,6 @@ const startAttendanceCheck = async () => {
   for (const meeting of currentMeetings) {
     const durationMeeting = getFullMinutesFromTime(meeting.endTime) - getFullMinutesFromTime(meeting.startTime)
     const minutesListenerCheckInterval = durationMeeting / countAttendanceCheckpoints;
-    console.log({minutesListenerCheckInterval});
-    console.log({durationMeeting});
     const attendanceCheckpoints = await AttendanceCheckpoint.findAll({
       where: {
         meetingId: meeting.id
@@ -39,14 +40,11 @@ const startAttendanceCheck = async () => {
     if (lastCheckpoint) {
       referencePoint = getTimeFromDatetime(lastCheckpoint.createdAt)
     }
-    //todo: посчитать время с последней проверки
-    // todo: отправить проверки
-
-
-
-
+    const minutesPassed = getFullMinutesFromTime(currentTime) - getFullMinutesFromTime(referencePoint)
+    if (minutesPassed >= minutesListenerCheckInterval) {
+      await sendCheckListeners(meeting)
+    }
   }
-  console.log('Done!');
 }
 
 const getLastCheckpoint = (checkpoints) => {
@@ -55,18 +53,4 @@ const getLastCheckpoint = (checkpoints) => {
   return checkpoints.find(checkpoint => checkpoint.id === maxId)
 }
 
-const getFullMinutesFromTime = (time) => {
-  const splitTime = time.split(':');
-  return parseInt(splitTime[0]) * 60 + parseInt(splitTime[1]);
-}
-
-const getTimeFromDatetime = (datetime) => {
-  return new Date(datetime).toTimeString().split(" ")[0];
-}
-
-const getDateFromDatetime = (datetime) => {
-  return new Date(datetime).toISOString().slice(0, 10)
-}
-
-// module.exports = setInterval(intervalFunc, 1000 * 60);
-module.exports = setInterval(startAttendanceCheck, 1000);
+module.exports = setInterval(startAttendanceCheck, 1000 * 30);
