@@ -1,4 +1,6 @@
 const isAuth = require('../middlewares/is-auth')
+const {createMeetingDTO} = require("../common/helpers");
+const {User} = require("../models/User");
 const {createUuid} = require("../common/uuid");
 const {Meeting} = require("../models/Meeting");
 const {Room} = require("../models/Room");
@@ -62,11 +64,13 @@ router.get('/api/room/:id/meetings', isAuth, async (req, res) => {
     return res.send(404)
   }
   const meetings = await Meeting.findAll({
+    raw: true,
     where: {
       roomId: room.id
     }
   })
-  res.json(meetings)
+  const meetingsDto = await Promise.all(meetings.map(async meeting => await createMeetingDTO(meeting)))
+  res.json(meetingsDto)
 })
 
 

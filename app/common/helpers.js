@@ -1,3 +1,5 @@
+const {User} = require("../models/User");
+const {Model} = require("sequelize");
 const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
 const {UserMeetingState} = require("../models/UserMeetingsState");
 const {Visitor} = require("../models/Visitor");
@@ -5,6 +7,7 @@ const {Meeting} = require('../models/Meeting')
 
 const findMeetingByHashId = meetingHashId => {
   return Meeting.findOne({
+    raw: true,
     where: {
       hashId: meetingHashId
     }
@@ -41,7 +44,13 @@ const createMessageDTO = (message, user) => {
   }
 }
 
-//todo: оказывается  библиотекие уже в есть такая функция
+const createMeetingDTO = async meeting => {
+  const {creatorId, ...meetingDto} = meeting
+  const creator = await User.findByPk(creatorId)
+  meetingDto.creator = createUserDTO(creator)
+  return meetingDto
+}
+
 const createVisitorIfNotExist = async (meetingId, userId) => {
   let visitor = await Visitor.findOne({
     where: {
@@ -110,6 +119,7 @@ module.exports = {
   resetUserMeetingState,
   findUserMeetingsState,
   createUserDTO,
-  sendCheckListeners
+  sendCheckListeners,
+  createMeetingDTO,
 
 }

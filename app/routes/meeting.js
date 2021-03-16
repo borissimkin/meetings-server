@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {createMeetingDTO} = require("../common/helpers");
 const {VisitorAttendanceCheck} = require("../models/VisitorAttendanceCheck");
 const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
 const {createUserDTO} = require("../common/helpers");
@@ -244,7 +245,8 @@ router.get('/api/meeting/:meetingId/messages', isAuth, async (req, res) => {
 router.get('/api/meeting/:meetingId', isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
-  res.json({...meeting.dataValues})
+
+  res.json(await createMeetingDTO(meeting))
 })
 
 /**

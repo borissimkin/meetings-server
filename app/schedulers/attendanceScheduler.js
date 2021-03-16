@@ -53,4 +53,6 @@ const getLastCheckpoint = (checkpoints) => {
   return checkpoints.find(checkpoint => checkpoint.id === maxId)
 }
 
-module.exports = setInterval(startAttendanceCheck, 1000 * 30);
+const secondsIntervalCheck = 30
+
+module.exports = setInterval(startAttendanceCheck, 1000 * secondsIntervalCheck);
