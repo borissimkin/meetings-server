@@ -42,6 +42,16 @@ router.get('/api/rooms', isAuth, async (req, res) => {
   return res.json(rooms)
 })
 
+router.get(`/api/rooms/:id`, isAuth, async (req, res) => {
+  const room = await Room.findOne({
+    raw: true,
+    where: {
+      hashId: req.params.id
+    }
+  })
+  res.json(room)
+})
+
 router.get('/api/room/:id/exists', isAuth, async (req, res) => {
   const room = await Room.findOne({
     where: {
