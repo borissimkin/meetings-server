@@ -15,6 +15,24 @@ const {createUuid} = require("../common/uuid");
 const {Room} = require("../models/Room");
 const {Meeting} = require("../models/Meeting");
 
+
+const currentUserIsConnectedToMeeting = (meetingHashId, currentUserId) => {
+  const meeting = io.sockets.adapter.rooms[meetingHashId]
+  if (!meeting) {
+    return false
+  }
+  const sockets = meeting.sockets
+  for (let socketId of Object.keys(sockets)) {
+    let clientSocket = io.sockets.connected[socketId];
+    if (clientSocket.user) {
+      if (clientSocket.user.id === currentUserId) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
 const getConnectedParticipantsOfMeeting = (meetingHashId, currentUserId) => {
   const meeting = io.sockets.adapter.rooms[meetingHashId]
   const connectedParticipant = []
@@ -223,6 +241,36 @@ router.get('/api/room/:roomId/meeting/:meetingId/exists', isAuth, async (req, re
   res.jsonp({
     exists: false
   })
+})
+
+
+router.get(`/api/room/:roomId/meeting/:meetingId/can-connect`, isAuth, async (req, res) => {
+  const roomHashId = req.params.roomId
+  const meetingHashId = req.params.meetingId
+  const room = await Room.findOne({
+    where: {
+      hashId: roomHashId
+    }
+  })
+  if (!room) {
+    res.status(404).send()
+  }
+  const meeting = await Meeting.findOne({
+    where: {
+      roomId: room.id,
+      hashId: meetingHashId
+    }
+  })
+  if (!meeting) {
+    res.status(404).send()
+  }
+  const currentUser = req.currentUser.dataValues;
+  const currentUserWasConnected = currentUserIsConnectedToMeeting(meetingHashId, currentUser.id)
+  if (currentUserWasConnected) {
+    res.status(400).send()
+
+  }
+  res.status(200).send()
 })
 
 router.get('/api/meeting/:meetingId/messages', isAuth, async (req, res) => {
