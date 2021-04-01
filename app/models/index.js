@@ -1,7 +1,7 @@
 const {Sequelize} = require("sequelize");
-//todo: вынести в конфиг
+require('dotenv').config()
 
-const sequelize = new Sequelize('postgresql://postgres:postgres@localhost:5432/meetings', {
+const sequelize = new Sequelize(`postgresql://${process.env.DATABASE_PATH}`, {
   logging: false
 });
 
