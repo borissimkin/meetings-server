@@ -1,7 +1,7 @@
 const express = require('express')
 const app = require('express')();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const https = require('https');
+const socket = require('socket.io');
 const cors = require('cors')
 
 const {User} = require("./models/User");
@@ -26,7 +26,15 @@ const {createMessageDTO, createUserDTO} = require("./common/helpers");
 const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
+const fs = require('fs');
 
+const options = {
+	key: fs.readFileSync('key.pem'),
+	cert: fs.readFileSync('cert.pem')
+};
+const server = https.createServer(options, app);
+
+const io = socket(server)
 
 app.use(cors())
 
@@ -35,7 +43,7 @@ app.use(bodyParser.urlencoded({
   extended: false
 }));
 
-const peerServer = PeerServer({port: 3001, path: '/'})
+const peerServer = PeerServer({path: '/', port: 3001, ssl: options})
 
 // peerServer.on('connection', (client) => {
 //   console.log(client)
@@ -44,7 +52,7 @@ const peerServer = PeerServer({port: 3001, path: '/'})
 // peerServer.on('disconnect', (client) => {
 //   console.log(client)
 // });
-
+console.log(__dirname)
 
 sequelize.sync()
 
