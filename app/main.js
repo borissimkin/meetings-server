@@ -1,7 +1,6 @@
 const express = require('express')
 const app = require('express')();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server);
+const socket = require('socket.io');
 const cors = require('cors')
 
 const {User} = require("./models/User");
@@ -26,7 +25,22 @@ const {createMessageDTO, createUserDTO} = require("./common/helpers");
 const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
+const fs = require('fs');
 
+
+const sslOptions = {}
+let httpServer;
+if (fs.existsSync("key.pm") && fs.existsSync("cert.pm")) {
+  sslOptions.key = fs.readFileSync('key.pem')
+  sslOptions.cert = fs.readFileSync('cert.pem')
+  httpServer = require('https');
+} else {
+  console.log("SSL certificates not found.")
+  httpServer = require('http');
+}
+const server = httpServer.createServer(sslOptions, app);
+
+const io = socket(server)
 
 app.use(cors())
 
@@ -35,16 +49,10 @@ app.use(bodyParser.urlencoded({
   extended: false
 }));
 
-const peerServer = PeerServer({port: 3001, path: '/'})
+const peerServerPort = process.env.PEER_SERVER_PORT || 3001
+PeerServer({path: '/', port: peerServerPort, ssl: sslOptions})
 
-// peerServer.on('connection', (client) => {
-//   console.log(client)
-// });
-//
-// peerServer.on('disconnect', (client) => {
-//   console.log(client)
-// });
-
+console.log(`Work directory= ${__dirname}`)
 
 sequelize.sync()
 
@@ -63,11 +71,12 @@ app.use(require('./routes/meeting'))
 
 app.use('/*', express.static(__dirname + '/dist'));
 
+const secondsIntervalSocketAuthMessage = 15
 
 io.sockets
   .on('connection', socketioJwt.authorize({
     secret: process.env.TOKEN_SECRET,
-    timeout: 15000 // 15 seconds to send the authentication message
+    timeout: secondsIntervalSocketAuthMessage * 1000
   }))
   .on('authenticated', async (socket) => {
     const user = await User.findByPk(socket.decoded_token.data.id)
