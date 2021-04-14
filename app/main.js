@@ -30,9 +30,11 @@ const fs = require('fs');
 
 const sslOptions = {}
 let httpServer;
-if (fs.existsSync("key.pm") && fs.existsSync("cert.pm")) {
-  sslOptions.key = fs.readFileSync('key.pem')
-  sslOptions.cert = fs.readFileSync('cert.pem')
+const pathKeyFile = "key.pem"
+const pathCertFile = "cert.pem"
+if (fs.existsSync(pathKeyFile) && fs.existsSync(pathCertFile)) {
+  sslOptions.key = fs.readFileSync(pathKeyFile)
+  sslOptions.cert = fs.readFileSync(pathCertFile)
   httpServer = require('https');
 } else {
   console.log("SSL certificates not found.")
@@ -94,6 +96,7 @@ io.sockets
         console.error(`Meeting with hashId=${meetingId} not exist`)
         return
       }
+      socket.meetingId = meetingId;
       socket.join(meetingId)
       await createVisitorIfNotExist(meeting.id, userInfo.id)
       const userMeetingState = await createUserMeetingStateIfNotExist(meeting.id, userInfo.id)
@@ -101,7 +104,6 @@ io.sockets
         enabledVideo,
         enabledAudio
       })
-      socket.meetingId = meetingId;
       socket.to(meetingId).broadcast.emit('userConnected', userInfo, settingDevices)
     });
 
