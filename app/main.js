@@ -11,6 +11,8 @@ const {Meeting} = require('./models/Meeting');
 const {UserMeetingState} = require('./models/UserMeetingsState');
 const {Visitor} = require('./models/Visitor');
 const {VisitorAttendanceCheck} = require('./models/VisitorAttendanceCheck');
+const {Exam} = require('./models/Exam');
+const {UserExamState} = require('./models/UserExamState');
 const sequelize = require('./models/index')
 
 const {PeerServer} = require('peer')
