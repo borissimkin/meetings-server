@@ -28,6 +28,8 @@ const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
 const fs = require('fs');
+const {createExamUserStateDTO} = require("./common/helpers");
+const {createUserExamStateIfNotExist} = require("./common/helpers");
 
 
 const sslOptions = {}
@@ -91,7 +93,6 @@ io.sockets
 
     const userInfo = createUserDTO(user)
     socket.on('join-meeting', async (meetingId, settingDevices) => {
-      //todo: add online field
       const meeting = await findMeetingByHashId(meetingId)
       const {enabledVideo, enabledAudio} = {...settingDevices}
       if (!meeting) {
@@ -107,6 +108,11 @@ io.sockets
         enabledAudio
       })
       socket.to(meetingId).broadcast.emit('userConnected', userInfo, settingDevices)
+      if (meeting.isExam && meeting.creatorId !== userInfo.id) {
+        const examState = await createUserExamStateIfNotExist(meeting.id, userInfo.id)
+        console.log({examState});
+        socket.to(meetingId).broadcast.emit('studentConnected', userInfo.id, createExamUserStateDTO(examState))
+      }
     });
 
     socket.on('leave-meeting', async (meetingId) => {

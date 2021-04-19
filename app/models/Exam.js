@@ -7,6 +7,7 @@ class Exam extends Model {}
 Exam.init({
   minutesToPrepare: {
     type: DataTypes.INTEGER,
+    defaultValue: 20
   },
 }, { sequelize, modelName: 'exam' });
 

@@ -1,5 +1,8 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {createExamUserStateDTO} = require("../common/helpers");
+const {UserExamState} = require("../models/UserExamState");
+const {Exam} = require("../models/Exam");
 const {createMeetingDTO} = require("../common/helpers");
 const {VisitorAttendanceCheck} = require("../models/VisitorAttendanceCheck");
 const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
@@ -196,6 +199,11 @@ router.post('/api/meeting/', isAuth, async (req, res) => {
     hashId,
     creatorId: id
   })
+  if (meeting.isExam) {
+    await Exam.create({
+      meetingId: meeting.id,
+    })
+  }
   const creator = {
     id,
     firstName,
@@ -352,6 +360,38 @@ router.get('/api/meeting/:meetingId/checkpoints', isAuth, async (req, res) => {
       }
     })
   )
+  res.json(result)
+})
+
+router.get('/api/meeting/:meetingId/exam', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const {minutesToPrepare, respondedUserId} = { exam }
+  console.log({minutesToPrepare, respondedUserId})
+  res.json({
+    minutesToPrepare,
+    respondedUserId
+  })
+})
+
+router.get('/api/meeting/:meetingId/exam/student-states', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+
+  const userExamStates = await UserExamState.findAll({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const result = {}
+  userExamStates.forEach(examState => {
+    result[examState.userId] = createExamUserStateDTO(examState)
+  })
   res.json(result)
 })
 

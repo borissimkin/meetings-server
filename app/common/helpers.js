@@ -1,3 +1,4 @@
+const {UserExamState} = require("../models/UserExamState");
 const {User} = require("../models/User");
 const {Model} = require("sequelize");
 const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
@@ -44,6 +45,12 @@ const createMessageDTO = (message, user) => {
   }
 }
 
+const createExamUserStateDTO = examUserState => {
+  return {
+    prepareStart: examState.prepareStart
+  }
+}
+
 const createMeetingDTO = async meeting => {
   const {creatorId, ...meetingDto} = meeting
   const creator = await User.findByPk(creatorId)
@@ -86,6 +93,14 @@ const userCanStartCheckListeners = (meeting, userId) => {
   return meeting.creatorId === userId
 }
 
+const createUserExamStateIfNotExist = async (meetingId, userId) => {
+  return await UserExamState.findOrCreate({
+    where: {
+      meetingId,
+      userId
+    }
+  })
+}
 
 const resetUserMeetingState = (userMeetingState) => {
   const defaultValues = {
@@ -121,5 +136,6 @@ module.exports = {
   createUserDTO,
   sendCheckListeners,
   createMeetingDTO,
-
+  createUserExamStateIfNotExist,
+  createExamUserStateDTO,
 }
