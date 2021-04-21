@@ -373,7 +373,6 @@ router.get('/api/meeting/:meetingId/exam', isAuth, async (req, res) => {
     raw: true
   })
   const { minutesToPrepare, respondedUserId} = { ...exam }
-  console.log({minutesToPrepare, respondedUserId})
   res.json({
     minutesToPrepare,
     respondedUserId

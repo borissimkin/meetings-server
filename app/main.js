@@ -194,6 +194,21 @@ io.sockets
       socket.to(socket.meetingId).broadcast.emit('callConnected', userInfo, peerId)
     })
 
+    socket.on('change-minutes-to-prepare-exam', async (minutesToPrepare) => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      if (meeting.creatorId !== user.id) {
+        return
+      }
+      const exam = await Exam.findOne({
+        where: {
+          meetingId: meeting.id
+        }
+      })
+      await exam.update({ minutesToPrepare })
+      socket.to(socket.meetingId).broadcast.emit('changeMinutesToPrepareExam', minutesToPrepare)
+
+    })
+
     socket.on('check-listeners', async () => {
       //todo: делать интервал в которое можно подтвердить присутствие
       const meeting = await findMeetingByHashId(socket.meetingId)
