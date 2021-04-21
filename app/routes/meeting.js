@@ -369,9 +369,10 @@ router.get('/api/meeting/:meetingId/exam', isAuth, async (req, res) => {
   const exam = await Exam.findOne({
     where: {
       meetingId: meeting.id
-    }
+    },
+    raw: true
   })
-  const {minutesToPrepare, respondedUserId} = { exam }
+  const { minutesToPrepare, respondedUserId} = { ...exam }
   console.log({minutesToPrepare, respondedUserId})
   res.json({
     minutesToPrepare,

@@ -47,7 +47,7 @@ const createMessageDTO = (message, user) => {
 
 const createExamUserStateDTO = examUserState => {
   return {
-    prepareStart: examState.prepareStart
+    prepareStart: examUserState.prepareStart
   }
 }
 
