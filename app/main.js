@@ -28,6 +28,8 @@ const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
 const fs = require('fs');
+const {Sequelize} = require("sequelize");
+const {getConnectedParticipantsOfMeeting} = require("./common/helpers");
 const {createExamUserStateDTO} = require("./common/helpers");
 const {createUserExamStateIfNotExist} = require("./common/helpers");
 

@@ -45,9 +45,10 @@ const createMessageDTO = (message, user) => {
   }
 }
 
-const createExamUserStateDTO = examUserState => {
+const createExamUserStateDTO = userExamState => {
   return {
-    prepareStart: examUserState.prepareStart
+    userId: userExamState.userId,
+    prepareStart: userExamState.prepareStart
   }
 }
 
@@ -102,6 +103,32 @@ const createUserExamStateIfNotExist = async (meetingId, userId) => {
   })
 }
 
+const getConnectedParticipantsOfMeeting = (meetingHashId, currentUserId= 0,) => {
+  const meeting = io.sockets.adapter.rooms[meetingHashId]
+  const connectedParticipant = []
+  if (!meeting) {
+    return connectedParticipant
+  }
+  const sockets = meeting.sockets
+  for (let socketId of Object.keys(sockets)) {
+    let clientSocket = io.sockets.connected[socketId];
+    if (clientSocket.user) {
+      if (currentUserId && clientSocket.user.id === currentUserId) {
+        continue
+      }
+      connectedParticipant.push({
+        user: {
+          id: clientSocket.user.id,
+          firstName: clientSocket.user.firstName,
+          lastName: clientSocket.user.lastName
+        },
+        peerId: clientSocket.user.peerId,
+      })
+    }
+  }
+  return connectedParticipant
+}
+
 const resetUserMeetingState = (userMeetingState) => {
   const defaultValues = {
     isRaisedHand: false,
@@ -138,4 +165,5 @@ module.exports = {
   createMeetingDTO,
   createUserExamStateIfNotExist,
   createExamUserStateDTO,
+  getConnectedParticipantsOfMeeting
 }
