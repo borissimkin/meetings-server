@@ -8,6 +8,9 @@ UserExamState.init({
   prepareStart: {
     type: DataTypes.DATE,
   },
+  minutesToPrepare: {
+    type: DataTypes.INTEGER
+  }
 }, { sequelize, modelName: 'user_exam_state' });
 
 Meeting.hasMany(UserExamState)

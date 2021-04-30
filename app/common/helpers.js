@@ -48,7 +48,8 @@ const createMessageDTO = (message, user) => {
 const createExamUserStateDTO = userExamState => {
   return {
     userId: userExamState.userId,
-    prepareStart: userExamState.prepareStart
+    prepareStart: userExamState.prepareStart,
+    minutesToPrepare: userExamState.minutesToPrepare
   }
 }
 

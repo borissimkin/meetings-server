@@ -386,9 +386,15 @@ router.put(`/api/meeting/:meetingId/exam/start-all-preparation`, isAuth, async (
       }
     },
   })
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    }
+  })
   const prepareStart = new Date()
+  const minutesToPrepare = exam.minutesToPrepare
   const examStatesUserIds = examStates.map(examState => examState.userId)
-  await UserExamState.update({ prepareStart },{
+  await UserExamState.update({ prepareStart, minutesToPrepare },{
     where: {
       meetingId: meeting.id,
       userId: {
