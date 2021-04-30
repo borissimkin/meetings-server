@@ -112,8 +112,7 @@ io.sockets
       socket.to(meetingId).broadcast.emit('userConnected', userInfo, settingDevices)
       if (meeting.isExam && meeting.creatorId !== userInfo.id) {
         const examState = await createUserExamStateIfNotExist(meeting.id, userInfo.id)
-        console.log({examState});
-        socket.to(meetingId).broadcast.emit('studentConnected', userInfo.id, createExamUserStateDTO(examState))
+        socket.to(meetingId).broadcast.emit('studentConnected', createExamUserStateDTO(examState))
       }
     });
 
