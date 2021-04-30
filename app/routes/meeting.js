@@ -405,7 +405,6 @@ router.put(`/api/meeting/:meetingId/exam/start-all-preparation`, isAuth, async (
   examStates = await UserExamState.findAll({
     where: {
       meetingId: meeting.id,
-      prepareStart: null,
       userId: {
         [Sequelize.Op.in]: examStatesUserIds
       }
@@ -418,5 +417,33 @@ router.put(`/api/meeting/:meetingId/exam/start-all-preparation`, isAuth, async (
   res.status(200).send()
 
 })
+
+router.put(`/api/meeting/:meetingId/exam/reset-all-preparation`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  const prepareStart = null
+  const minutesToPrepare = null
+  await UserExamState.update({ prepareStart, minutesToPrepare },{
+    where: {
+      meetingId: meeting.id,
+    },
+  })
+  const examStates = await UserExamState.findAll({
+    where: {
+      meetingId: meeting.id,
+    },
+  })
+
+  const result = examStates.map(examState => createExamUserStateDTO(examState))
+
+  io.in(meetingHashId).emit('resetAllPreparation', result);
+  res.status(200).send()
+
+})
+
 
 module.exports = router
