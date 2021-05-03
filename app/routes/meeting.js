@@ -445,5 +445,70 @@ router.put(`/api/meeting/:meetingId/exam/reset-all-preparation`, isAuth, async (
 
 })
 
+router.put(`/api/meeting/:meetingId/exam/reset-preparation/:userId`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const userId = req.params.userId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  await UserExamState.update({ prepareStart: null, minutesToPrepare: null }, {
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  const examState = await UserExamState.findOne({
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  if (!examState) {
+    return res.status(404).send()
+  }
+  //todo: переименовать событие
+  io.in(meetingHashId).emit(`resetAllPreparation`, [createExamUserStateDTO(examState)])
+  res.status(200).send()
+
+})
+
+router.put(`/api/meeting/:meetingId/exam/start-preparation/:userId`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const userId = req.params.userId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const prepareStart = new Date()
+  const minutesToPrepare = exam.minutesToPrepare
+  await UserExamState.update({ prepareStart, minutesToPrepare }, {
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  const examState = await UserExamState.findOne({
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  if (!examState) {
+    return res.status(404).send()
+  }
+  //todo: переименовать событие
+  io.in(meetingHashId).emit(`startAllPreparation`, [createExamUserStateDTO(examState)])
+  res.status(200).send()
+})
+
+
 
 module.exports = router
