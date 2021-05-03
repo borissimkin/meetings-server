@@ -413,7 +413,7 @@ router.put(`/api/meeting/:meetingId/exam/start-all-preparation`, isAuth, async (
 
   const result = examStates.map(examState => createExamUserStateDTO(examState))
 
-  io.in(meetingHashId).emit('startAllPreparation', result);
+  io.in(meetingHashId).emit('startPreparation', result);
   res.status(200).send()
 
 })
@@ -440,7 +440,7 @@ router.put(`/api/meeting/:meetingId/exam/reset-all-preparation`, isAuth, async (
 
   const result = examStates.map(examState => createExamUserStateDTO(examState))
 
-  io.in(meetingHashId).emit('resetAllPreparation', result);
+  io.in(meetingHashId).emit('resetPreparation', result);
   res.status(200).send()
 
 })
@@ -468,8 +468,7 @@ router.put(`/api/meeting/:meetingId/exam/reset-preparation/:userId`, isAuth, asy
   if (!examState) {
     return res.status(404).send()
   }
-  //todo: переименовать событие
-  io.in(meetingHashId).emit(`resetAllPreparation`, [createExamUserStateDTO(examState)])
+  io.in(meetingHashId).emit(`resetPreparation`, [createExamUserStateDTO(examState)])
   res.status(200).send()
 
 })
@@ -504,8 +503,7 @@ router.put(`/api/meeting/:meetingId/exam/start-preparation/:userId`, isAuth, asy
   if (!examState) {
     return res.status(404).send()
   }
-  //todo: переименовать событие
-  io.in(meetingHashId).emit(`startAllPreparation`, [createExamUserStateDTO(examState)])
+  io.in(meetingHashId).emit(`startPreparation`, [createExamUserStateDTO(examState)])
   res.status(200).send()
 })
 
