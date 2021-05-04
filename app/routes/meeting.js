@@ -509,7 +509,7 @@ router.put(`/api/meeting/:meetingId/exam/start-preparation/:userId`, isAuth, asy
 
 router.put(`/api/meeting/:meetingId/exam/set-responded-user/:userId`, isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
-  const userId = req.params.userId
+  let userId = req.params.userId
   const currentUser = req.currentUser.dataValues;
   const meeting = await findMeetingByHashId(meetingHashId)
   if (meeting.creatorId !== currentUser.id) {
@@ -523,10 +523,15 @@ router.put(`/api/meeting/:meetingId/exam/set-responded-user/:userId`, isAuth, as
   if (!exam) {
     return res.status(404).send()
   }
-  const user = await User.findByPk(userId)
-  if (!user) {
-    return res.status(404).send()
+  if (Number(userId) === 0) {
+    userId = null
+  } else {
+    const user = await User.findByPk(userId)
+    if (!user && Number(userId) !== 0) {
+      return res.status(404).send()
+    }
   }
+
   await exam.update({ respondedUserId: userId })
   io.in(meetingHashId).emit(`setRespondedUserId`, userId)
   res.status(200).send()
