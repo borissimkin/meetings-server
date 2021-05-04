@@ -507,6 +507,31 @@ router.put(`/api/meeting/:meetingId/exam/start-preparation/:userId`, isAuth, asy
   res.status(200).send()
 })
 
+router.put(`/api/meeting/:meetingId/exam/set-responded-user/:userId`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const userId = req.params.userId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  if (!exam) {
+    return res.status(404).send()
+  }
+  const user = await User.findByPk(userId)
+  if (!user) {
+    return res.status(404).send()
+  }
+  await exam.update({ respondedUserId: userId })
+  io.in(meetingHashId).emit(`setRespondedUserId`, userId)
+  res.status(200).send()
+})
+
 
 
 module.exports = router
