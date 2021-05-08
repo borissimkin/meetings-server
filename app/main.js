@@ -11,6 +11,8 @@ const {Meeting} = require('./models/Meeting');
 const {UserMeetingState} = require('./models/UserMeetingsState');
 const {Visitor} = require('./models/Visitor');
 const {VisitorAttendanceCheck} = require('./models/VisitorAttendanceCheck');
+const {Exam} = require('./models/Exam');
+const {UserExamState} = require('./models/UserExamState');
 const sequelize = require('./models/index')
 
 const {PeerServer} = require('peer')
@@ -26,6 +28,10 @@ const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
 const fs = require('fs');
+const {Sequelize} = require("sequelize");
+const {getConnectedParticipantsOfMeeting} = require("./common/helpers");
+const {createExamUserStateDTO} = require("./common/helpers");
+const {createUserExamStateIfNotExist} = require("./common/helpers");
 
 
 const sslOptions = {}
@@ -89,7 +95,6 @@ io.sockets
 
     const userInfo = createUserDTO(user)
     socket.on('join-meeting', async (meetingId, settingDevices) => {
-      //todo: add online field
       const meeting = await findMeetingByHashId(meetingId)
       const {enabledVideo, enabledAudio} = {...settingDevices}
       if (!meeting) {
@@ -105,6 +110,10 @@ io.sockets
         enabledAudio
       })
       socket.to(meetingId).broadcast.emit('userConnected', userInfo, settingDevices)
+      if (meeting.isExam && meeting.creatorId !== userInfo.id) {
+        const examState = await createUserExamStateIfNotExist(meeting.id, userInfo.id)
+        socket.to(meetingId).broadcast.emit('studentConnected', createExamUserStateDTO(examState))
+      }
     });
 
     socket.on('leave-meeting', async (meetingId) => {
@@ -184,6 +193,21 @@ io.sockets
         peerId
       }
       socket.to(socket.meetingId).broadcast.emit('callConnected', userInfo, peerId)
+    })
+
+    socket.on('change-minutes-to-prepare-exam', async (minutesToPrepare) => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      if (meeting.creatorId !== user.id) {
+        return
+      }
+      const exam = await Exam.findOne({
+        where: {
+          meetingId: meeting.id
+        }
+      })
+      await exam.update({ minutesToPrepare })
+      socket.to(socket.meetingId).broadcast.emit('changeMinutesToPrepareExam', minutesToPrepare)
+
     })
 
     socket.on('check-listeners', async () => {

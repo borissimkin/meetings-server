@@ -1,3 +1,4 @@
+const {UserExamState} = require("../models/UserExamState");
 const {User} = require("../models/User");
 const {Model} = require("sequelize");
 const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
@@ -44,6 +45,14 @@ const createMessageDTO = (message, user) => {
   }
 }
 
+const createExamUserStateDTO = userExamState => {
+  return {
+    userId: userExamState.userId,
+    prepareStart: userExamState.prepareStart,
+    minutesToPrepare: userExamState.minutesToPrepare
+  }
+}
+
 const createMeetingDTO = async meeting => {
   const {creatorId, ...meetingDto} = meeting
   const creator = await User.findByPk(creatorId)
@@ -86,6 +95,40 @@ const userCanStartCheckListeners = (meeting, userId) => {
   return meeting.creatorId === userId
 }
 
+const createUserExamStateIfNotExist = async (meetingId, userId) => {
+  return await UserExamState.findOrCreate({
+    where: {
+      meetingId,
+      userId
+    }
+  })
+}
+
+const getConnectedParticipantsOfMeeting = (meetingHashId, currentUserId= 0,) => {
+  const meeting = io.sockets.adapter.rooms[meetingHashId]
+  const connectedParticipant = []
+  if (!meeting) {
+    return connectedParticipant
+  }
+  const sockets = meeting.sockets
+  for (let socketId of Object.keys(sockets)) {
+    let clientSocket = io.sockets.connected[socketId];
+    if (clientSocket.user) {
+      if (currentUserId && clientSocket.user.id === currentUserId) {
+        continue
+      }
+      connectedParticipant.push({
+        user: {
+          id: clientSocket.user.id,
+          firstName: clientSocket.user.firstName,
+          lastName: clientSocket.user.lastName
+        },
+        peerId: clientSocket.user.peerId,
+      })
+    }
+  }
+  return connectedParticipant
+}
 
 const resetUserMeetingState = (userMeetingState) => {
   const defaultValues = {
@@ -121,5 +164,7 @@ module.exports = {
   createUserDTO,
   sendCheckListeners,
   createMeetingDTO,
-
+  createUserExamStateIfNotExist,
+  createExamUserStateDTO,
+  getConnectedParticipantsOfMeeting
 }

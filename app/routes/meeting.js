@@ -1,5 +1,9 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {getConnectedParticipantsOfMeeting} = require("../common/helpers");
+const {createExamUserStateDTO} = require("../common/helpers");
+const {UserExamState} = require("../models/UserExamState");
+const {Exam} = require("../models/Exam");
 const {createMeetingDTO} = require("../common/helpers");
 const {VisitorAttendanceCheck} = require("../models/VisitorAttendanceCheck");
 const {AttendanceCheckpoint} = require("../models/AttendanceCheckpoint");
@@ -33,31 +37,6 @@ const currentUserIsConnectedToMeeting = (meetingHashId, currentUserId) => {
   return false
 }
 
-const getConnectedParticipantsOfMeeting = (meetingHashId, currentUserId) => {
-  const meeting = io.sockets.adapter.rooms[meetingHashId]
-  const connectedParticipant = []
-  if (!meeting) {
-    return connectedParticipant
-  }
-  const sockets = meeting.sockets
-  for (let socketId of Object.keys(sockets)) {
-    let clientSocket = io.sockets.connected[socketId];
-    if (clientSocket.user) {
-      if (clientSocket.user.id === currentUserId) {
-        continue
-      }
-      connectedParticipant.push({
-        user: {
-          id: clientSocket.user.id,
-          firstName: clientSocket.user.firstName,
-          lastName: clientSocket.user.lastName
-        },
-        peerId: clientSocket.user.peerId,
-      })
-    }
-  }
-  return connectedParticipant
-}
 /**
  * Возвращает всех участников, кто хоть раз заходил в собрание, не включая текущего пользователя.
  * [{
@@ -196,6 +175,11 @@ router.post('/api/meeting/', isAuth, async (req, res) => {
     hashId,
     creatorId: id
   })
+  if (meeting.isExam) {
+    await Exam.create({
+      meetingId: meeting.id,
+    })
+  }
   const creator = {
     id,
     firstName,
@@ -354,5 +338,205 @@ router.get('/api/meeting/:meetingId/checkpoints', isAuth, async (req, res) => {
   )
   res.json(result)
 })
+
+router.get('/api/meeting/:meetingId/exam', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    },
+    raw: true
+  })
+  const { minutesToPrepare, respondedUserId} = { ...exam }
+  res.json({
+    minutesToPrepare,
+    respondedUserId
+  })
+})
+
+router.get('/api/meeting/:meetingId/exam/student-states', isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+
+  const userExamStates = await UserExamState.findAll({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const result = userExamStates.map(examState => createExamUserStateDTO(examState))
+  res.json(result)
+})
+
+router.put(`/api/meeting/:meetingId/exam/start-all-preparation`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  const onlineParticipants = getConnectedParticipantsOfMeeting(meetingHashId, currentUser.id)
+  const participantIds = onlineParticipants.map(participant => participant.user.id)
+  let examStates = await UserExamState.findAll({
+    where: {
+      meetingId: meeting.id,
+      prepareStart: null,
+      userId: {
+        [Sequelize.Op.in]: participantIds
+      }
+    },
+  })
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const prepareStart = new Date()
+  const minutesToPrepare = exam.minutesToPrepare
+  const examStatesUserIds = examStates.map(examState => examState.userId)
+  await UserExamState.update({ prepareStart, minutesToPrepare },{
+    where: {
+      meetingId: meeting.id,
+      userId: {
+        [Sequelize.Op.in]: examStatesUserIds
+      }
+    },
+  })
+  examStates = await UserExamState.findAll({
+    where: {
+      meetingId: meeting.id,
+      userId: {
+        [Sequelize.Op.in]: examStatesUserIds
+      }
+    },
+  })
+
+  const result = examStates.map(examState => createExamUserStateDTO(examState))
+
+  io.in(meetingHashId).emit('startPreparation', result);
+  res.status(200).send()
+
+})
+
+router.put(`/api/meeting/:meetingId/exam/reset-all-preparation`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  const prepareStart = null
+  const minutesToPrepare = null
+  await UserExamState.update({ prepareStart, minutesToPrepare },{
+    where: {
+      meetingId: meeting.id,
+    },
+  })
+  const examStates = await UserExamState.findAll({
+    where: {
+      meetingId: meeting.id,
+    },
+  })
+
+  const result = examStates.map(examState => createExamUserStateDTO(examState))
+
+  io.in(meetingHashId).emit('resetPreparation', result);
+  res.status(200).send()
+
+})
+
+router.put(`/api/meeting/:meetingId/exam/reset-preparation/:userId`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const userId = req.params.userId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  await UserExamState.update({ prepareStart: null, minutesToPrepare: null }, {
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  const examState = await UserExamState.findOne({
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  if (!examState) {
+    return res.status(404).send()
+  }
+  io.in(meetingHashId).emit(`resetPreparation`, [createExamUserStateDTO(examState)])
+  res.status(200).send()
+
+})
+
+router.put(`/api/meeting/:meetingId/exam/start-preparation/:userId`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const userId = req.params.userId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const prepareStart = new Date()
+  const minutesToPrepare = exam.minutesToPrepare
+  await UserExamState.update({ prepareStart, minutesToPrepare }, {
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  const examState = await UserExamState.findOne({
+    where: {
+      meetingId: meeting.id,
+      userId: userId
+    }
+  })
+  if (!examState) {
+    return res.status(404).send()
+  }
+  io.in(meetingHashId).emit(`startPreparation`, [createExamUserStateDTO(examState)])
+  res.status(200).send()
+})
+
+router.put(`/api/meeting/:meetingId/exam/set-responded-user/:userId`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  let userId = req.params.userId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  if (meeting.creatorId !== currentUser.id) {
+    return res.status(403).send()
+  }
+  const exam = await Exam.findOne({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  if (!exam) {
+    return res.status(404).send()
+  }
+  if (Number(userId) === 0) {
+    userId = null
+  } else {
+    const user = await User.findByPk(userId)
+    if (!user && Number(userId) !== 0) {
+      return res.status(404).send()
+    }
+  }
+
+  await exam.update({ respondedUserId: userId })
+  io.in(meetingHashId).emit(`setRespondedUserId`, userId)
+  res.status(200).send()
+})
+
+
 
 module.exports = router
