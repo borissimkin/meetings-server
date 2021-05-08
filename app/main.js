@@ -13,6 +13,8 @@ const {Visitor} = require('./models/Visitor');
 const {VisitorAttendanceCheck} = require('./models/VisitorAttendanceCheck');
 const {Exam} = require('./models/Exam');
 const {UserExamState} = require('./models/UserExamState');
+const {WhiteboardData} = require('./models/WhiteboardData');
+
 const sequelize = require('./models/index')
 
 const {PeerServer} = require('peer')
@@ -164,6 +166,10 @@ io.sockets
 
     socket.on('whiteboard-drawing', (data) => {
       socket.to(socket.meetingId).broadcast.emit('whiteboardDrawing', data)
+    })
+
+    socket.on('whiteboard-end-drawing', (data) => {
+      console.log({data});
     })
 
     socket.on('raise-hand', async isRaisedHand => {
