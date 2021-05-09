@@ -13,6 +13,8 @@ const {Visitor} = require('./models/Visitor');
 const {VisitorAttendanceCheck} = require('./models/VisitorAttendanceCheck');
 const {Exam} = require('./models/Exam');
 const {UserExamState} = require('./models/UserExamState');
+const {WhiteboardData} = require('./models/WhiteboardData');
+
 const sequelize = require('./models/index')
 
 const {PeerServer} = require('peer')
@@ -28,6 +30,7 @@ const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
 const fs = require('fs');
+const {createWhiteboardDataDTO} = require("./common/helpers");
 const {Sequelize} = require("sequelize");
 const {getConnectedParticipantsOfMeeting} = require("./common/helpers");
 const {createExamUserStateDTO} = require("./common/helpers");
@@ -164,6 +167,51 @@ io.sockets
 
     socket.on('whiteboard-drawing', (data) => {
       socket.to(socket.meetingId).broadcast.emit('whiteboardDrawing', data)
+    })
+
+    socket.on('whiteboard-end-drawing', async (data) => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const drawings = JSON.stringify(data)
+      const whiteboardData = await WhiteboardData.create({
+        userId: userInfo.id,
+        meetingId: meeting.id,
+        drawings
+      })
+      io.in(socket.meetingId).emit('whiteboardEndDrawing', createWhiteboardDataDTO(whiteboardData))
+    })
+
+    socket.on('whiteboard-clear', async () => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      await WhiteboardData.destroy({
+        where: {
+          meetingId: meeting.id
+        }
+      })
+      socket.to(socket.meetingId).broadcast.emit('whiteboardClear')
+
+    })
+
+    socket.on('whiteboard-remove-element', async (whiteboardDataId) => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      await WhiteboardData.destroy({
+        where: {
+          id: whiteboardDataId,
+          userId: userInfo.id,
+          meetingId: meeting.id
+        }
+      })
+      socket.to(socket.meetingId).broadcast.emit('whiteboardRemoveElement', whiteboardDataId)
+    })
+
+    socket.on('whiteboard-create-element', async data => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const drawings = JSON.stringify(data)
+      const whiteboardData = await WhiteboardData.create({
+        userId: userInfo.id,
+        meetingId: meeting.id,
+        drawings
+      })
+      io.in(socket.meetingId).emit('whiteboardCreateElement', createWhiteboardDataDTO(whiteboardData))
     })
 
     socket.on('raise-hand', async isRaisedHand => {

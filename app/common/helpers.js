@@ -60,6 +60,14 @@ const createMeetingDTO = async meeting => {
   return meetingDto
 }
 
+const createWhiteboardDataDTO = whiteboardData => {
+  return {
+    id: whiteboardData.id,
+    userId: whiteboardData.userId,
+    drawings: whiteboardData.drawings
+  }
+}
+
 const createVisitorIfNotExist = async (meetingId, userId) => {
   let visitor = await Visitor.findOne({
     where: {
@@ -166,5 +174,6 @@ module.exports = {
   createMeetingDTO,
   createUserExamStateIfNotExist,
   createExamUserStateDTO,
-  getConnectedParticipantsOfMeeting
+  getConnectedParticipantsOfMeeting,
+  createWhiteboardDataDTO
 }
