@@ -30,6 +30,7 @@ const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
 const fs = require('fs');
+const {createWhiteboardDataDTO} = require("./common/helpers");
 const {Sequelize} = require("sequelize");
 const {getConnectedParticipantsOfMeeting} = require("./common/helpers");
 const {createExamUserStateDTO} = require("./common/helpers");
@@ -168,8 +169,18 @@ io.sockets
       socket.to(socket.meetingId).broadcast.emit('whiteboardDrawing', data)
     })
 
-    socket.on('whiteboard-end-drawing', (data) => {
-      console.log({data});
+    socket.on('whiteboard-end-drawing', async (data) => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const drawings = JSON.stringify(data)
+      console.log({ drawings })
+      const whiteboardData = await WhiteboardData.create({
+        userId: userInfo.id,
+        meetingId: meeting.id,
+        drawings
+      })
+      io.in(socket.meetingId).emit('whiteboardEndDrawing', createWhiteboardDataDTO(whiteboardData))
+
+
     })
 
     socket.on('raise-hand', async isRaisedHand => {

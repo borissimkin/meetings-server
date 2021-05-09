@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {WhiteboardData} = require("../models/WhiteboardData");
 const {getConnectedParticipantsOfMeeting} = require("../common/helpers");
 const {createExamUserStateDTO} = require("../common/helpers");
 const {UserExamState} = require("../models/UserExamState");
@@ -535,6 +536,18 @@ router.put(`/api/meeting/:meetingId/exam/set-responded-user/:userId`, isAuth, as
   await exam.update({ respondedUserId: userId })
   io.in(meetingHashId).emit(`setRespondedUserId`, userId)
   res.status(200).send()
+})
+router.get(`/api/meeting/:meetingId/whiteboard`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const whiteboardData = await WhiteboardData.findAll({
+    attributes: ['id', 'userId', 'meetingId', 'drawings'],
+    where: {
+      meetingId: meeting.id
+    },
+    raw: true
+  })
+  res.send(whiteboardData)
 })
 
 
