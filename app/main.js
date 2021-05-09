@@ -172,7 +172,6 @@ io.sockets
     socket.on('whiteboard-end-drawing', async (data) => {
       const meeting = await findMeetingByHashId(socket.meetingId)
       const drawings = JSON.stringify(data)
-      console.log({ drawings })
       const whiteboardData = await WhiteboardData.create({
         userId: userInfo.id,
         meetingId: meeting.id,
@@ -190,6 +189,18 @@ io.sockets
       })
       socket.to(socket.meetingId).broadcast.emit('whiteboardClear')
 
+    })
+
+    socket.on('whiteboard-remove-element', async (whiteboardDataId) => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      await WhiteboardData.destroy({
+        where: {
+          id: whiteboardDataId,
+          userId: userInfo.id,
+          meetingId: meeting.id
+        }
+      })
+      socket.to(socket.meetingId).broadcast.emit('whiteboardRemoveElement', whiteboardDataId)
     })
 
     socket.on('raise-hand', async isRaisedHand => {
