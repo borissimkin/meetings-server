@@ -203,6 +203,17 @@ io.sockets
       socket.to(socket.meetingId).broadcast.emit('whiteboardRemoveElement', whiteboardDataId)
     })
 
+    socket.on('whiteboard-create-element', async data => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      const drawings = JSON.stringify(data)
+      const whiteboardData = await WhiteboardData.create({
+        userId: userInfo.id,
+        meetingId: meeting.id,
+        drawings
+      })
+      io.in(socket.meetingId).emit('whiteboardCreateElement', createWhiteboardDataDTO(whiteboardData))
+    })
+
     socket.on('raise-hand', async isRaisedHand => {
       const meeting = await findMeetingByHashId(socket.meetingId)
       const userMeetingState = await findUserMeetingsState(meeting.id, userInfo.id)
