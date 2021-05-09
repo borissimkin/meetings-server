@@ -179,7 +179,16 @@ io.sockets
         drawings
       })
       io.in(socket.meetingId).emit('whiteboardEndDrawing', createWhiteboardDataDTO(whiteboardData))
+    })
 
+    socket.on('whiteboard-clear', async () => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      await WhiteboardData.destroy({
+        where: {
+          meetingId: meeting.id
+        }
+      })
+      socket.to(socket.meetingId).broadcast.emit('whiteboardClear')
 
     })
 
