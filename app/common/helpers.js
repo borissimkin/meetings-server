@@ -93,11 +93,11 @@ const createMeetingPermissionIfNotExist = async (meeting, userId) => {
     }
   })
   if (!permissions) {
-    const canDrawings = meeting.creatorId === userId
+    const canDrawing = meeting.creatorId === userId
     permissions = await MeetingPermission.create({
       userId,
       meetingId: meeting.id,
-      canDrawings
+      canDrawing
     })
   }
   return permissions

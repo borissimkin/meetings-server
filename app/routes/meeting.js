@@ -555,7 +555,7 @@ router.get(`/api/meeting/:meetingId/permissions`, isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
   const permissions = await MeetingPermission.findAll({
-    attributes: ['userId', 'canDrawings'],
+    attributes: ['userId', 'canDrawing'],
     where: {
       meetingId: meeting.id
     },

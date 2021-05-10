@@ -109,13 +109,13 @@ io.sockets
       socket.meetingId = meetingId;
       socket.join(meetingId)
       await createVisitorIfNotExist(meeting.id, userInfo.id)
-      await createMeetingPermissionIfNotExist(meeting, userInfo.id)
+      const permissions = await createMeetingPermissionIfNotExist(meeting, userInfo.id)
       const userMeetingState = await createUserMeetingStateIfNotExist(meeting.id, userInfo.id)
       await userMeetingState.update({
         enabledVideo,
         enabledAudio
       })
-      socket.to(meetingId).broadcast.emit('userConnected', userInfo, settingDevices)
+      socket.to(meetingId).broadcast.emit('userConnected', {user: userInfo, settingDevices, permissions})
       if (meeting.isExam && meeting.creatorId !== userInfo.id) {
         const examState = await createUserExamStateIfNotExist(meeting.id, userInfo.id)
         socket.to(meetingId).broadcast.emit('studentConnected', createExamUserStateDTO(examState))
@@ -304,7 +304,7 @@ io.sockets
       if (!user) {
         return
       }
-      const permissions = await MeetingPermission.find({
+      const permissions = await MeetingPermission.findOne({
         where: {
           meetingId: meeting.id,
           userId: user.id
