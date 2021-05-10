@@ -31,6 +31,7 @@ const {findMeetingByHashId} = require("./common/helpers");
 const attendanceInterval = require("./schedulers/attendanceScheduler")
 const {sendCheckListeners} = require("./common/helpers");
 const fs = require('fs');
+const {createMeetingPermissionIfNotExist} = require("./common/helpers");
 const {createWhiteboardDataDTO} = require("./common/helpers");
 const {Sequelize} = require("sequelize");
 const {getConnectedParticipantsOfMeeting} = require("./common/helpers");
@@ -108,6 +109,7 @@ io.sockets
       socket.meetingId = meetingId;
       socket.join(meetingId)
       await createVisitorIfNotExist(meeting.id, userInfo.id)
+      await createMeetingPermissionIfNotExist(meeting, userInfo.id)
       const userMeetingState = await createUserMeetingStateIfNotExist(meeting.id, userInfo.id)
       await userMeetingState.update({
         enabledVideo,
@@ -291,6 +293,25 @@ io.sockets
 
       socket.to(socket.meetingId).broadcast.emit('passCheckListeners', checkpointId, socket.user.id)
 
+    })
+
+    socket.on('change-can-drawing', async ({userId, canDrawing}) => {
+      const meeting = await findMeetingByHashId(socket.meetingId)
+      if (userInfo.id !== meeting.creatorId) {
+        return
+      }
+      const user = await User.findByPk(userId)
+      if (!user) {
+        return
+      }
+      const permissions = await MeetingPermission.find({
+        where: {
+          meetingId: meeting.id,
+          userId: user.id
+        }
+      })
+      await permissions.update({ canDrawing })
+      socket.to(socket.meetingId).broadcast.emit('changeCanDrawing', {userId, canDrawing})
     })
 
 

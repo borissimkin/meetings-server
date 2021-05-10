@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {MeetingPermission} = require("../models/MeetingPermission");
 const {WhiteboardData} = require("../models/WhiteboardData");
 const {getConnectedParticipantsOfMeeting} = require("../common/helpers");
 const {createExamUserStateDTO} = require("../common/helpers");
@@ -549,6 +550,20 @@ router.get(`/api/meeting/:meetingId/whiteboard`, isAuth, async (req, res) => {
   })
   res.send(whiteboardData)
 })
+
+router.get(`/api/meeting/:meetingId/permissions`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const permissions = await MeetingPermission.findAll({
+    attributes: ['userId', 'canDrawings'],
+    where: {
+      meetingId: meeting.id
+    },
+    raw: true
+  })
+  res.send(permissions)
+})
+
 
 
 
