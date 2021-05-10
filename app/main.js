@@ -14,6 +14,7 @@ const {VisitorAttendanceCheck} = require('./models/VisitorAttendanceCheck');
 const {Exam} = require('./models/Exam');
 const {UserExamState} = require('./models/UserExamState');
 const {WhiteboardData} = require('./models/WhiteboardData');
+const {MeetingPermission} = require('./models/MeetingPermission');
 
 const sequelize = require('./models/index')
 
