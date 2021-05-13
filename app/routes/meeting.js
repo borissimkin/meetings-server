@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const isAuth = require('../middlewares/is-auth')
+const {createMeetingPermissionIfNotExist} = require("../common/helpers");
 const {MeetingPermission} = require("../models/MeetingPermission");
 const {WhiteboardData} = require("../models/WhiteboardData");
 const {getConnectedParticipantsOfMeeting} = require("../common/helpers");
@@ -554,14 +555,31 @@ router.get(`/api/meeting/:meetingId/whiteboard`, isAuth, async (req, res) => {
 router.get(`/api/meeting/:meetingId/permissions`, isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
+  const currentUser = req.currentUser.dataValues;
   const permissions = await MeetingPermission.findAll({
     attributes: ['userId', 'canDrawing'],
     where: {
-      meetingId: meeting.id
+      meetingId: meeting.id,
+      userId: {
+        [Sequelize.Op.ne]: currentUser.id
+      },
     },
     raw: true
   })
   res.send(permissions)
+})
+
+router.get(`/api/meeting/:meetingId/permissions-my`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const currentUser = req.currentUser.dataValues;
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const permission = await createMeetingPermissionIfNotExist(meeting, currentUser.id)
+  res.send(
+    {
+      userId: currentUser.id,
+      canDrawing: permission.canDrawing
+    }
+  )
 })
 
 
