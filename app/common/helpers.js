@@ -1,3 +1,4 @@
+const {MeetingPermission} = require("../models/MeetingPermission");
 const {UserExamState} = require("../models/UserExamState");
 const {User} = require("../models/User");
 const {Model} = require("sequelize");
@@ -82,6 +83,24 @@ const createVisitorIfNotExist = async (meetingId, userId) => {
     })
   }
   return visitor
+}
+
+const createMeetingPermissionIfNotExist = async (meeting, userId) => {
+  let permissions = await MeetingPermission.findOne({
+    where: {
+      userId,
+      meetingId: meeting.id
+    }
+  })
+  if (!permissions) {
+    const canDrawing = meeting.creatorId === userId
+    permissions = await MeetingPermission.create({
+      userId,
+      meetingId: meeting.id,
+      canDrawing
+    })
+  }
+  return permissions
 }
 
 const createUserMeetingStateIfNotExist = async (meetingId, userId) => {
@@ -175,5 +194,6 @@ module.exports = {
   createUserExamStateIfNotExist,
   createExamUserStateDTO,
   getConnectedParticipantsOfMeeting,
-  createWhiteboardDataDTO
+  createWhiteboardDataDTO,
+  createMeetingPermissionIfNotExist
 }
