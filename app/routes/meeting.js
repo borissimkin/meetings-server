@@ -582,6 +582,42 @@ router.get(`/api/meeting/:meetingId/permissions-my`, isAuth, async (req, res) =>
   )
 })
 
+router.get(`/api/meeting/:meetingId/visitors`, isAuth, async (req, res) => {
+  const meetingHashId = req.params.meetingId
+  const meeting = await findMeetingByHashId(meetingHashId)
+  const visitors = await Visitor.findAll({
+    where: {
+      meetingId: meeting.id
+    }
+  })
+  const checkpointsOfMeetingIds = (await AttendanceCheckpoint.findAll({
+    where: {
+      meetingId: meeting.id
+    },
+    raw: true,
+  })).map(x => x.id)
+  const result = await Promise.all(
+    visitors.map(async visitor => {
+      const passedCheckpoints = await VisitorAttendanceCheck.findAll({
+        where: {
+          attendanceCheckpointId: {
+            [Sequelize.Op.in]: checkpointsOfMeetingIds
+          },
+          visitorId: visitor.id
+        }
+      })
+      const countPassedCheckpoints = passedCheckpoints.length
+      const user = await User.findByPk(visitor.userId)
+      return {
+        id: visitor.id,
+        countPassedCheckpoints,
+        user: createUserDTO(user)
+      }
+    })
+  )
+  res.json(result)
+})
+
 
 
 
