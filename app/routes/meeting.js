@@ -263,6 +263,9 @@ router.get(`/api/room/:roomId/meeting/:meetingId/can-connect`, isAuth, async (re
 router.get('/api/meeting/:meetingId/messages', isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
+  if (!meeting) {
+    res.status(404).send()
+  }
   const messages = await Message.findAll({
     where: {
       meetingId: meeting.id
@@ -305,6 +308,9 @@ router.get('/api/meeting/:meetingId', isAuth, async (req, res) => {
 router.get('/api/meeting/:meetingId/checkpoints', isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
+  if (!meeting) {
+    return res.status(404).send()
+  }
   const checkpoints = await AttendanceCheckpoint.findAll({
     where: {
       meetingId: meeting.id
@@ -585,6 +591,10 @@ router.get(`/api/meeting/:meetingId/permissions-my`, isAuth, async (req, res) =>
 router.get(`/api/meeting/:meetingId/visitors`, isAuth, async (req, res) => {
   const meetingHashId = req.params.meetingId
   const meeting = await findMeetingByHashId(meetingHashId)
+  if (!meeting) {
+    return res.status(404).send()
+  }
+
   const visitors = await Visitor.findAll({
     where: {
       meetingId: meeting.id
@@ -611,6 +621,7 @@ router.get(`/api/meeting/:meetingId/visitors`, isAuth, async (req, res) => {
       return {
         id: visitor.id,
         countPassedCheckpoints,
+        createdAt: visitor.createdAt,
         user: createUserDTO(user)
       }
     })
